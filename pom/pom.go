@@ -59,6 +59,14 @@ func ParseHeader(r io.Reader) (Header, error) {
 	return head, nil
 }
 
+func (head Header) EffectiveIdentity() Identity {
+	return Identity{
+		GroupID:    head.EffectiveGroupID(),
+		ArtifactID: head.EffectiveArtifactID(),
+		Version:    head.EffectiveVersion(),
+	}
+}
+
 func (head Header) EffectiveGroupID() string {
 	if head.GroupID == "" {
 		return head.Parent.GroupID
