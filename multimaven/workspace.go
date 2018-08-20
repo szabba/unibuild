@@ -7,11 +7,10 @@ package multimaven
 import (
 	"context"
 
-	"github.com/szabba/uninbuild/pom"
-
 	"github.com/samsarahq/go/oops"
 
 	"github.com/szabba/uninbuild"
+	"github.com/szabba/uninbuild/maven"
 	"github.com/szabba/uninbuild/repo"
 )
 
@@ -77,8 +76,8 @@ func (ws Workspace) resolveDeps(ctx context.Context, depless []Project) ([]Proje
 	return prjs, nil
 }
 
-func (ws Workspace) identifyProviders(prjs []Project) (map[pom.Identity]Project, error) {
-	providers := map[pom.Identity]Project{}
+func (ws Workspace) identifyProviders(prjs []Project) (map[maven.Identity]Project, error) {
+	providers := map[maven.Identity]Project{}
 	for _, p := range prjs {
 		err := ws.addProvided(p, providers)
 		if err != nil {
@@ -88,7 +87,7 @@ func (ws Workspace) identifyProviders(prjs []Project) (map[pom.Identity]Project,
 	return providers, nil
 }
 
-func (ws Workspace) addProvided(prj Project, providers map[pom.Identity]Project) error {
+func (ws Workspace) addProvided(prj Project, providers map[maven.Identity]Project) error {
 	for _, h := range prj.MavenModuleHeaders() {
 		hID := h.EffectiveIdentity()
 		if _, present := providers[hID]; present {

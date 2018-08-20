@@ -15,7 +15,7 @@ import (
 
 	"github.com/samsarahq/go/oops"
 	"github.com/szabba/uninbuild"
-	"github.com/szabba/uninbuild/pom"
+	"github.com/szabba/uninbuild/maven"
 	"github.com/szabba/uninbuild/repo"
 )
 
@@ -24,13 +24,13 @@ type Project struct {
 	version  string
 	dir      string
 	deps     []unibuild.ProjectInfo
-	pomHeads []pom.Header
+	pomHeads []maven.Header
 }
 
 var _ unibuild.Project = Project{}
 
 func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
-	pomHeads, err := pom.Scan(ctx, clone.Path)
+	pomHeads, err := maven.Scan(ctx, clone.Path)
 	if err != nil {
 		return Project{}, oops.Wrapf(err, "failed scanning for maven modules in %s", clone.Path)
 	}
@@ -53,9 +53,9 @@ func (prj Project) Info() unibuild.ProjectInfo {
 
 func (prj Project) Deps() []unibuild.ProjectInfo { return prj.deps }
 
-func (prj Project) MavenModuleHeaders() []pom.Header { return prj.pomHeads }
+func (prj Project) MavenModuleHeaders() []maven.Header { return prj.pomHeads }
 
-func (prj Project) WithDependnecies(ctx context.Context, providers map[pom.Identity]Project) (Project, error) {
+func (prj Project) WithDependnecies(ctx context.Context, providers map[maven.Identity]Project) (Project, error) {
 	mvnDeps, err := prj.FindMavenDeps(ctx)
 	if err != nil {
 		return prj, oops.Wrapf(err, "problem resolving deps of %s", prj.name)
@@ -88,8 +88,8 @@ func (prj Project) Build(ctx context.Context, arts map[unibuild.ProjectInfo][]un
 	return nil, err
 }
 
-func (prj Project) FindMavenDeps(ctx context.Context) ([]pom.Identity, error) {
-	allDeps := map[pom.Identity]bool{}
+func (prj Project) FindMavenDeps(ctx context.Context) ([]maven.Identity, error) {
+	allDeps := map[maven.Identity]bool{}
 	for _, mod := range prj.MavenModuleHeaders() {
 
 		ids, err := prj.listMavenDeps(ctx, mod)
@@ -101,14 +101,14 @@ func (prj Project) FindMavenDeps(ctx context.Context) ([]pom.Identity, error) {
 		}
 	}
 
-	ids := make([]pom.Identity, 0, len(allDeps))
+	ids := make([]maven.Identity, 0, len(allDeps))
 	for id := range allDeps {
 		ids = append(ids, id)
 	}
 	return ids, nil
 }
 
-func (prj Project) listMavenDeps(ctx context.Context, mod pom.Header) ([]pom.Identity, error) {
+func (prj Project) listMavenDeps(ctx context.Context, mod maven.Header) ([]maven.Identity, error) {
 	modPrjName := mod.GroupID + ":" + mod.ArtifactID
 	cmd := exec.CommandContext(ctx, "mvn", "dependency:list", "-pl", modPrjName)
 	cmd.Dir = prj.dir
@@ -139,7 +139,7 @@ var (
 	newline = regexp.MustCompile("\n|\r\n")
 )
 
-func (prj Project) parseDepList(mvnOut string) ([]pom.Identity, error) {
+func (prj Project) parseDepList(mvnOut string) ([]maven.Identity, error) {
 	lines := newline.Split(mvnOut, -1)
 	lines, err := prj.skipPastHeader(lines)
 	if err != nil {
@@ -159,8 +159,8 @@ func (prj Project) skipPastHeader(lines []string) ([]string, error) {
 	return lines, errNoDepListHeader
 }
 
-func (prj Project) extractIdentities(lines []string) ([]pom.Identity, error) {
-	deps := []pom.Identity{}
+func (prj Project) extractIdentities(lines []string) ([]maven.Identity, error) {
+	deps := []maven.Identity{}
 	for len(lines) > 1 {
 		l, rest := lines[0], lines[1:]
 		d, err := prj.extractIdentity(l)
@@ -176,21 +176,21 @@ func (prj Project) extractIdentities(lines []string) ([]pom.Identity, error) {
 	return deps, nil
 }
 
-func (prj Project) extractIdentity(line string) (pom.Identity, error) {
+func (prj Project) extractIdentity(line string) (maven.Identity, error) {
 	line = strings.TrimPrefix(line, _MavenOutputPrefix)
 	line = strings.TrimSpace(line)
 
 	if line == "" || line == "none" {
-		return pom.Identity{}, errDepListOver
+		return maven.Identity{}, errDepListOver
 	}
 
 	chunks := strings.Split(line, ":")
 
 	if len(chunks) != _DepChunks {
-		return pom.Identity{}, oops.Errorf("dependency format invalid: %s", line)
+		return maven.Identity{}, oops.Errorf("dependency format invalid: %s", line)
 	}
 
-	id := pom.Identity{
+	id := maven.Identity{
 		GroupID:    chunks[_GroupIDIx],
 		ArtifactID: chunks[_ArtifactIDIx],
 		Version:    chunks[_VersionIx],
