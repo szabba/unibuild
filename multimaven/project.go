@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -111,6 +112,7 @@ func (prj Project) listMavenDeps(ctx context.Context, mod pom.Header) ([]pom.Ide
 	modPrjName := mod.GroupID + ":" + mod.ArtifactID
 	cmd := exec.CommandContext(ctx, "mvn", "dependency:list", "-pl", modPrjName)
 	cmd.Dir = prj.dir
+	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, oops.Wrapf(err, "cannot list dependencies project %s module %s", prj.Info().Name, modPrjName)
