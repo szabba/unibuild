@@ -6,12 +6,8 @@ package multimaven
 
 import (
 	"context"
-	"errors"
 	"io"
-	"os"
 	"os/exec"
-	"regexp"
-	"strings"
 
 	"github.com/samsarahq/go/oops"
 	"github.com/szabba/uninbuild"
@@ -89,111 +85,9 @@ func (prj Project) Build(ctx context.Context, arts map[unibuild.ProjectInfo][]un
 }
 
 func (prj Project) FindMavenDeps(ctx context.Context) ([]maven.Identity, error) {
-	allDeps := map[maven.Identity]bool{}
-	for _, mod := range prj.MavenModuleHeaders() {
-
-		ids, err := prj.listMavenDeps(ctx, mod)
-		if err != nil {
-			return nil, oops.Wrapf(err, "problem listing deps of project %s module %s", prj.name, mod.ArtifactID+":"+mod.GroupID)
-		}
-		for _, id := range ids {
-			allDeps[id] = true
-		}
+	mods := make([]maven.Identity, len(prj.pomHeads))
+	for i, h := range prj.pomHeads {
+		mods[i] = h.EffectiveIdentity()
 	}
-
-	ids := make([]maven.Identity, 0, len(allDeps))
-	for id := range allDeps {
-		ids = append(ids, id)
-	}
-	return ids, nil
-}
-
-func (prj Project) listMavenDeps(ctx context.Context, mod maven.Header) ([]maven.Identity, error) {
-	modPrjName := mod.GroupID + ":" + mod.ArtifactID
-	cmd := exec.CommandContext(ctx, "mvn", "dependency:list", "-pl", modPrjName)
-	cmd.Dir = prj.dir
-	cmd.Stderr = os.Stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, oops.Wrapf(err, "cannot list dependencies project %s module %s", prj.Info().Name, modPrjName)
-	}
-	depIDs, err := prj.parseDepList(string(out))
-	return depIDs, oops.Wrapf(err, "cannot parse dependency list of project %s module %s", prj.Info().Name, modPrjName)
-}
-
-const (
-	_MavenOutputPrefix  = "[INFO]"
-	_MavenDepListHeader = "The following files have been resolved:"
-
-	_GroupIDIx    = 0
-	_ArtifactIDIx = 1
-	_VersionIx    = 3
-	_DepChunks    = 5
-)
-
-var (
-	errNoDepListHeader   = errors.New("could not find a dependency list header")
-	errInvalidDepListing = errors.New("dependency list line invalid")
-	errDepListOver       = errors.New("no more dependencies in list")
-
-	newline = regexp.MustCompile("\n|\r\n")
-)
-
-func (prj Project) parseDepList(mvnOut string) ([]maven.Identity, error) {
-	lines := newline.Split(mvnOut, -1)
-	lines, err := prj.skipPastHeader(lines)
-	if err != nil {
-		return nil, err
-	}
-	return prj.extractIdentities(lines)
-}
-
-func (prj Project) skipPastHeader(lines []string) ([]string, error) {
-	for len(lines) > 1 {
-		l, rest := lines[0], lines[1:]
-		if strings.Contains(l, _MavenDepListHeader) {
-			return rest, nil
-		}
-		lines = rest
-	}
-	return lines, errNoDepListHeader
-}
-
-func (prj Project) extractIdentities(lines []string) ([]maven.Identity, error) {
-	deps := []maven.Identity{}
-	for len(lines) > 1 {
-		l, rest := lines[0], lines[1:]
-		d, err := prj.extractIdentity(l)
-		if err == errDepListOver {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		deps = append(deps, d)
-		lines = rest
-	}
-	return deps, nil
-}
-
-func (prj Project) extractIdentity(line string) (maven.Identity, error) {
-	line = strings.TrimPrefix(line, _MavenOutputPrefix)
-	line = strings.TrimSpace(line)
-
-	if line == "" || line == "none" {
-		return maven.Identity{}, errDepListOver
-	}
-
-	chunks := strings.Split(line, ":")
-
-	if len(chunks) != _DepChunks {
-		return maven.Identity{}, oops.Errorf("dependency format invalid: %s", line)
-	}
-
-	id := maven.Identity{
-		GroupID:    chunks[_GroupIDIx],
-		ArtifactID: chunks[_ArtifactIDIx],
-		Version:    chunks[_VersionIx],
-	}
-	return id, nil
+	return maven.ListDeps(ctx, prj.dir, mods)
 }
