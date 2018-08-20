@@ -16,23 +16,25 @@ import (
 )
 
 const (
-	_MavenOutputPrefix  = "[INFO]"
-	_MavenDepListHeader = "The following files have been resolved:"
+	mavenOutputPrefix  = "[INFO]"
+	mavenDepListHeader = "The following files have been resolved:"
 
-	_GroupIDIx    = 0
-	_ArtifactIDIx = 1
-	_VersionIx    = 3
-	_DepChunks    = 5
+	groupIDIx    = 0
+	artifactIDIx = 1
+	versionIx    = 3
+	depChunks    = 5
 )
 
 var (
-	_ErrNoDepListHeader   = errors.New("could not find a dependency list header")
-	_ErrInvalidDepListing = errors.New("dependency list line invalid")
-	_ErrDepListOver       = errors.New("no more dependencies in list")
+	errNoDepListHeader   = errors.New("could not find a dependency list header")
+	errInvalidDepListing = errors.New("dependency list line invalid")
+	errDepListOver       = errors.New("no more dependencies in list")
 
-	_Newline = regexp.MustCompile("\n|\r\n")
+	newline = regexp.MustCompile("\n|\r\n")
 )
 
+// ListDeps finds the dependencies of all the modules inside a multi-module project directory.
+// The results reflect how maven will resolve the dependencies.
 func ListDeps(ctx context.Context, path string, mods []Identity) ([]Identity, error) {
 	all := map[Identity]bool{}
 	for _, m := range mods {
@@ -52,16 +54,18 @@ func ListDeps(ctx context.Context, path string, mods []Identity) ([]Identity, er
 	return out, nil
 }
 
-func ListModuleDeps(ctx context.Context, path string, mod Identity) ([]Identity, error) {
+// ListModuleDeps finds the dependencies of a module inside a multi-module project directory.
+// The results reflect how maven will resolve the dependencies.
+func ListModuleDeps(ctx context.Context, dir string, mod Identity) ([]Identity, error) {
 	modRef := mod.GroupID + ":" + mod.ArtifactID
 	cmd := exec.CommandContext(ctx, "mvn", "dependency:list", "-pl", modRef)
-	cmd.Dir = path
+	cmd.Dir = dir
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, oops.Wrapf(err, "problem listing maven dependencies in project at %s, module %s", path, modRef)
+		return nil, oops.Wrapf(err, "problem listing maven dependencies in project at %s, module %s", dir, modRef)
 	}
-	lines := _Newline.Split(string(out), -1)
+	lines := newline.Split(string(out), -1)
 	return newDepListParser(lines).parse()
 }
 
@@ -89,18 +93,18 @@ func (p *depListParser) skipPastHeader() error {
 	for len(p.lines) > 1 {
 		l := p.lines[0]
 		p.lines = p.lines[1:]
-		if strings.Contains(l, _MavenDepListHeader) {
+		if strings.Contains(l, mavenDepListHeader) {
 			return nil
 		}
 	}
-	return _ErrNoDepListHeader
+	return errNoDepListHeader
 }
 
 func (p *depListParser) parseAll() ([]Identity, error) {
 	deps := make([]Identity, 0, len(p.lines))
 	for len(p.lines) > 1 {
 		err := p.parseOne()
-		if err == _ErrDepListOver {
+		if err == errDepListOver {
 			return p.deps, nil
 		}
 		if err != nil {
@@ -112,23 +116,23 @@ func (p *depListParser) parseAll() ([]Identity, error) {
 
 func (p *depListParser) parseOne() error {
 	line := p.lines[0]
-	line = strings.TrimPrefix(line, _MavenOutputPrefix)
+	line = strings.TrimPrefix(line, mavenOutputPrefix)
 	line = strings.TrimSpace(line)
 
 	if line == "" || line == "none" {
-		return _ErrDepListOver
+		return errDepListOver
 	}
 
 	chunks := strings.Split(line, ":")
 
-	if len(chunks) != _DepChunks {
+	if len(chunks) != depChunks {
 		return oops.Errorf("dependency format invalid: %s", line)
 	}
 
 	id := Identity{
-		GroupID:    chunks[_GroupIDIx],
-		ArtifactID: chunks[_ArtifactIDIx],
-		Version:    chunks[_VersionIx],
+		GroupID:    chunks[groupIDIx],
+		ArtifactID: chunks[artifactIDIx],
+		Version:    chunks[versionIx],
 	}
 	p.lines, p.deps = p.lines[1:], append(p.deps, id)
 	return nil

@@ -6,7 +6,6 @@ package maven
 
 import (
 	"context"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,14 +14,14 @@ import (
 	"github.com/samsarahq/go/oops"
 )
 
-var ErrNoPOMs = errors.New("no POMs found")
-
 var newlinePattern = regexp.MustCompile("\n|\r\n")
 
-func Scan(ctx context.Context, path string) ([]Header, error) {
-	paths, err := scanPaths(ctx, path)
+// Scan parses the Headers of the POM in dir and all of it's submodules recursively.
+// If no error occurrs, the returned slice is non-empty.
+func Scan(ctx context.Context, dir string) ([]Header, error) {
+	paths, err := scanPaths(ctx, dir)
 	if err != nil {
-		return nil, oops.Wrapf(err, "cannot scan for POMs in %s", path)
+		return nil, oops.Wrapf(err, "cannot scan for POMs in %s", dir)
 	}
 
 	headers := make([]Header, 0, len(paths))
@@ -57,7 +56,7 @@ func scanPaths(ctx context.Context, path string) ([]string, error) {
 	}
 
 	if len(poms) < 1 {
-		return poms, ErrNoPOMs
+		return poms, oops.Errorf("no POMs found in directory %s", path)
 	}
 	return poms, nil
 }

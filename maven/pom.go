@@ -19,17 +19,22 @@ var (
 	errNoVersion    = errors.New("no version")
 )
 
+// A Header corresponds to the parts of a POM that determine the identity of a maven module.
 type Header struct {
 	Parent Identity `xml:"parent"`
 	Identity
 }
 
+// An Identity of a maven module.
 type Identity struct {
 	GroupID    string `xml:"groupId"`
 	ArtifactID string `xml:"artifactId"`
 	Version    string `xml:"version"`
 }
 
+// ParseHeaderFromPath parses the Header from a POM with the given path.
+// Parsing will fail if the POM is missing information required to compute an Identity.
+// The path should locate the POM file, not the directory it resides in.
 func ParseHeaderFromPath(path string) (Header, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -39,6 +44,8 @@ func ParseHeaderFromPath(path string) (Header, error) {
 	return ParseHeader(f)
 }
 
+// ParseHeader parses the Header of a POM from the given io.Reader.
+// Parsing will fail if the POM is missing information required to compute an Identity.
 func ParseHeader(r io.Reader) (Header, error) {
 	head := Header{}
 	err := xml.NewDecoder(r).Decode(&head)
@@ -59,6 +66,7 @@ func ParseHeader(r io.Reader) (Header, error) {
 	return head, nil
 }
 
+// EffectiveIdentity calculates the effective identity of a module based on it's Header.
 func (head Header) EffectiveIdentity() Identity {
 	return Identity{
 		GroupID:    head.EffectiveGroupID(),
@@ -67,6 +75,8 @@ func (head Header) EffectiveIdentity() Identity {
 	}
 }
 
+// EffectiveGroupID is the groupId of a POM.
+// If a groupId was not specified explicitly, the parent one is used.
 func (head Header) EffectiveGroupID() string {
 	if head.GroupID == "" {
 		return head.Parent.GroupID
@@ -74,6 +84,8 @@ func (head Header) EffectiveGroupID() string {
 	return head.GroupID
 }
 
+// EffectiveArtifactID is the artifactId of a POM.
+// If an artifactId was not specified explicitly, the parent one is used.
 func (head Header) EffectiveArtifactID() string {
 	if head.ArtifactID == "" {
 		return head.Parent.ArtifactID
@@ -81,6 +93,8 @@ func (head Header) EffectiveArtifactID() string {
 	return head.ArtifactID
 }
 
+// EffectiveVersion is the version of a POM.
+// If a version was not specified explicitly, the parent one is used.
 func (head Header) EffectiveVersion() string {
 	if head.Version == "" {
 		return head.Parent.Version
