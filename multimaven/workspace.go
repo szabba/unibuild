@@ -15,18 +15,18 @@ import (
 )
 
 type Workspace struct {
-	dir   string
-	repos []repo.Remote
+	dir    string
+	clones *repo.ClonedSet
 }
 
 var _ unibuild.Workspace = Workspace{}
 
-func NewWorkspace(dir string, repos []repo.Remote) *Workspace {
-	return &Workspace{dir, repos}
+func NewWorkspace(dir string, clones *repo.ClonedSet) *Workspace {
+	return &Workspace{dir, clones}
 }
 
 func (ws Workspace) Projects(ctx context.Context) ([]unibuild.Project, error) {
-	depless, err := ws.identifyProjects(ctx, ws.repos)
+	depless, err := ws.identifyProjects(ctx)
 	if err != nil {
 		return nil, oops.Wrapf(err, "problem identifying projects")
 	}
@@ -43,16 +43,19 @@ func (ws Workspace) Projects(ctx context.Context) ([]unibuild.Project, error) {
 	return prjs, nil
 }
 
-func (ws Workspace) identifyProjects(ctx context.Context, repos []repo.Remote) ([]Project, error) {
-	prjs := make([]Project, 0, len(repos))
-	for _, r := range repos {
-
-		p, err := ws.repoToProject(ctx, r)
+func (ws Workspace) identifyProjects(ctx context.Context) ([]Project, error) {
+	prjs := make([]Project, 0, ws.clones.Size())
+	err := ws.clones.EachTry(func(cln repo.Local) error {
+		p, err := NewProject(ctx, cln)
 		if err != nil {
-			return nil, oops.Wrapf(err, "")
+			return oops.Wrapf(err, "problem identifying project of repo %s", cln.Name)
 		}
-
 		prjs = append(prjs, p)
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 	return prjs, nil
 }

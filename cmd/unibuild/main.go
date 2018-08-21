@@ -40,7 +40,12 @@ func main() {
 		ctx, _ = context.WithTimeout(ctx, flags.timeout)
 	}
 
-	space := multimaven.NewWorkspace("", repos)
+	clones, err := repo.CloneAll(ctx, repos, ".")
+	if err != nil {
+		log.Fatalf("problem cloning repos: %s", err)
+	}
+
+	space := multimaven.NewWorkspace("", clones)
 	runBuild(ctx, space)
 }
 
@@ -76,20 +81,22 @@ func (fs *Flags) Parse() {
 	}
 }
 
-func getRepos(authToken, name string) ([]repo.Remote, error) {
+func getRepos(authToken, name string) (*repo.Set, error) {
 	cli := gitlab.NewClient(nil, authToken)
 	group, _, err := cli.Groups.GetGroup(name)
 	if err != nil {
 		return nil, oops.Wrapf(err, "cannot retrieve gitlab group %s", name)
 	}
 
-	repos := make([]repo.Remote, 0, len(group.Projects))
+	repos := repo.NewSet()
 	for _, prj := range group.Projects {
-		r := repo.Remote{
+		err := repos.Add(repo.Remote{
 			Name: prj.Name,
 			URL:  prj.SSHURLToRepo,
+		})
+		if err != nil {
+			return nil, oops.Wrapf(err, "cannot build repository set for group %s", name)
 		}
-		repos = append(repos, r)
 	}
 	return repos, nil
 }
