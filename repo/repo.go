@@ -46,6 +46,14 @@ func (l Local) Reset(ctx context.Context) error {
 	return cmd.Run()
 }
 
+func (l Local) Fetch(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "git", "fetch", "--force", "--prune", "--tags")
+	cmd.Dir = l.Path
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
 func (l Local) Checkout(ctx context.Context, ref string) error {
 	cmd := exec.CommandContext(ctx, "git", "checkout", "--force", ref)
 	cmd.Dir = l.Path

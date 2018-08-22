@@ -42,6 +42,8 @@ func CloneAll(ctx context.Context, set *Set, dir string) (*ClonedSet, error) {
 	return clones, wrap(err)
 }
 
+func (set *ClonedSet) Dir() string { return set.dir }
+
 func (set *ClonedSet) Clone(ctx context.Context, r Remote) error {
 	wrap := func(err error) error {
 		return oops.Wrapf(err, "problem cloning remote repository %#v inside directory %s", r, set.dir)
@@ -56,6 +58,14 @@ func (set *ClonedSet) Clone(ctx context.Context, r Remote) error {
 		return wrap(err)
 	}
 
+	set.repos[l.Name] = l
+	return nil
+}
+
+func (set *ClonedSet) add(l Local) error {
+	if prev, present := set.repos[l.Name]; present && l != prev {
+		return ErrDuplicateName
+	}
 	set.repos[l.Name] = l
 	return nil
 }

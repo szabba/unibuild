@@ -40,12 +40,10 @@ func main() {
 		ctx, _ = context.WithTimeout(ctx, flags.timeout)
 	}
 
-	clones, err := repo.CloneAll(ctx, repos, ".")
+	clones, err := repo.SyncAll(ctx, repos, ".")
 	if err != nil {
-		clones.Clear()
-		log.Fatalf("problem cloning repos: %s", err)
+		log.Fatalf("problem syncing repos: %s", err)
 	}
-	defer clones.Clear()
 
 	space := multimaven.NewWorkspace("", clones)
 	runBuild(ctx, space)
