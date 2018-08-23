@@ -40,7 +40,8 @@ func main() {
 	defer cancel()
 
 	if flags.timeout > 0 {
-		ctx, _ = context.WithTimeout(ctx, flags.timeout)
+		ctx, cancel = context.WithTimeout(ctx, flags.timeout)
+		defer cancel()
 	}
 
 	clones, err := repo.SyncAll(ctx, repos, ".")
