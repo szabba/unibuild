@@ -15,17 +15,36 @@ import (
 )
 
 type Workspace struct {
-	dir    string
-	clones *repo.ClonedSet
+	dir      string
+	clones   *repo.ClonedSet
+	projects []unibuild.Project
 }
 
-var _ unibuild.Workspace = Workspace{}
+var _ unibuild.Workspace = &Workspace{}
 
-func NewWorkspace(dir string, clones *repo.ClonedSet) *Workspace {
-	return &Workspace{dir, clones}
+func NewWorkspace(ctx context.Context, clones *repo.ClonedSet) (*Workspace, error) {
+	ws := &Workspace{
+		dir:    clones.Dir(),
+		clones: clones,
+	}
+	prjs, err := ws.findProjects(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ws.projects = prjs
+	return ws, nil
 }
 
 func (ws Workspace) Projects(ctx context.Context) ([]unibuild.Project, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return ws.projects, nil
+	}
+}
+
+func (ws Workspace) findProjects(ctx context.Context) ([]unibuild.Project, error) {
 	depless, err := ws.identifyProjects(ctx)
 	if err != nil {
 		return nil, oops.Wrapf(err, "problem identifying projects")

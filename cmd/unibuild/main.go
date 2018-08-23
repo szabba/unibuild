@@ -45,7 +45,10 @@ func main() {
 		log.Fatalf("problem syncing repos: %s", err)
 	}
 
-	space := multimaven.NewWorkspace("", clones)
+	space, err := multimaven.NewWorkspace(ctx, clones)
+	if err != nil {
+		log.Fatalf("problem building workspace: %s", err)
+	}
 	runBuild(ctx, space)
 }
 
