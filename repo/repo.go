@@ -55,7 +55,7 @@ func (l Local) Fetch(ctx context.Context) error {
 }
 
 func (l Local) Checkout(ctx context.Context, ref string) error {
-	cmd := exec.CommandContext(ctx, "git", "checkout", "--force", ref)
+	cmd := exec.CommandContext(ctx, "git", "checkout", "-B", ref, "origin/"+ref)
 	cmd.Dir = l.Path
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
