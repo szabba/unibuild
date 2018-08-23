@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -19,6 +20,8 @@ import (
 	"github.com/szabba/uninbuild/multimaven"
 	"github.com/szabba/uninbuild/repo"
 )
+
+var ErrNoBranchesToTry = errors.New("no branches to try provided")
 
 func main() {
 	flags := new(Flags)
@@ -45,6 +48,10 @@ func main() {
 		log.Fatalf("problem syncing repos: %s", err)
 	}
 
+	err = clones.EachTry(func(l repo.Local) error {
+		return checkout(ctx, l, flags.branches.topic, flags.branches.default_)
+	})
+
 	space, err := multimaven.NewWorkspace(ctx, clones)
 	if err != nil {
 		log.Fatalf("problem building workspace: %s", err)
@@ -53,17 +60,23 @@ func main() {
 }
 
 type Flags struct {
+	logUTC    bool
+	timeout   time.Duration
 	authToken string
 	group     string
-	timeout   time.Duration
-	logUTC    bool
+	branches  struct {
+		topic    string
+		default_ string
+	}
 }
 
 func (fs *Flags) Parse() {
+	flag.BoolVar(&fs.logUTC, "log-utc", false, "when present, the time in logs is in UTC (local otherwise)")
+	flag.DurationVar(&fs.timeout, "timeout", time.Duration(0), "the timeout for the build (ignored if <= 0)")
 	flag.StringVar(&fs.authToken, "auth-token", "", "gitlab API authentication token (required)")
 	flag.StringVar(&fs.group, "group", "", "gitlab group to clone repositories from (required)")
-	flag.DurationVar(&fs.timeout, "timeout", time.Duration(0), "the timeout for the build (ignored if <= 0)")
-	flag.BoolVar(&fs.logUTC, "log-utc", false, "when present, the time in logs is in UTC (local otherwise)")
+	flag.StringVar(&fs.branches.topic, "topic-branch", "", "topic branch to checkout, if available (ignored when empty)")
+	flag.StringVar(&fs.branches.default_, "default-branch", "master", "the branch to default to when the topic branch is not used")
 
 	flag.Parse()
 
@@ -102,6 +115,25 @@ func getRepos(authToken, name string) (*repo.Set, error) {
 		}
 	}
 	return repos, nil
+}
+
+func checkout(ctx context.Context, l repo.Local, branches ...string) error {
+	var err error
+	anyTried := false
+	for _, br := range branches {
+		if br == "" {
+			continue
+		}
+		anyTried = true
+		err = l.Checkout(ctx, br)
+		if err == nil {
+			return nil
+		}
+	}
+	if !anyTried {
+		return ErrNoBranchesToTry
+	}
+	return err
 }
 
 func runBuild(ctx context.Context, ws unibuild.Workspace) {
