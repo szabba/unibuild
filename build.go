@@ -13,13 +13,8 @@ import (
 	"github.com/soniakeys/graph"
 )
 
-func Build(ctx context.Context, space Workspace) error {
-	prjs, err := space.Projects(ctx)
-	if err != nil {
-		return oops.Wrapf(err, "cannot list projects")
-	}
-
-	orded, err := orderProjects(prjs)
+func BuildProjects(ctx context.Context, projects []Project) error {
+	orded, err := orderProjects(projects)
 	if err != nil {
 		return oops.Wrapf(err, "cannot resolve build order")
 	}

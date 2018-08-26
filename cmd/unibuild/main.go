@@ -60,7 +60,9 @@ func main() {
 		log.Fatalf("problem building workspace: %s", err)
 	}
 
-	err = unibuild.Build(ctx, space)
+	prjs := space.Projects()
+
+	err = unibuild.BuildProjects(ctx, prjs)
 	log.Printf("build took %s", time.Now().Sub(start))
 
 	if err != nil {

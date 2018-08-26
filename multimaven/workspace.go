@@ -20,8 +20,6 @@ type Workspace struct {
 	projects []unibuild.Project
 }
 
-var _ unibuild.Workspace = &Workspace{}
-
 func NewWorkspace(ctx context.Context, clones *repo.ClonedSet) (*Workspace, error) {
 	ws := &Workspace{
 		dir:    clones.Dir(),
@@ -35,14 +33,7 @@ func NewWorkspace(ctx context.Context, clones *repo.ClonedSet) (*Workspace, erro
 	return ws, nil
 }
 
-func (ws Workspace) Projects(ctx context.Context) ([]unibuild.Project, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-		return ws.projects, nil
-	}
-}
+func (ws Workspace) Projects() []unibuild.Project { return ws.projects }
 
 func (ws Workspace) findProjects(ctx context.Context) ([]unibuild.Project, error) {
 	depless, err := ws.identifyProjects(ctx)
