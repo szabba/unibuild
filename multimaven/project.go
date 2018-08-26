@@ -75,13 +75,12 @@ func (prj Project) WithDependnecies(ctx context.Context, providers map[maven.Ide
 	return out, nil
 }
 
-func (prj Project) Build(ctx context.Context, arts map[unibuild.ProjectInfo][]unibuild.Artifact, logTo io.Writer) ([]unibuild.Artifact, error) {
+func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
 	cmd := exec.CommandContext(ctx, "mvn", "clean", "deploy")
 	cmd.Dir = prj.dir
 	cmd.Stdout = logTo
 	cmd.Stderr = logTo
-	err := cmd.Run()
-	return nil, err
+	return cmd.Run()
 }
 
 func (prj Project) FindMavenDeps(ctx context.Context) ([]maven.Identity, error) {

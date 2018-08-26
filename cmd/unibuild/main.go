@@ -44,6 +44,8 @@ func main() {
 		defer cancel()
 	}
 
+	start := time.Now()
+
 	clones, err := repo.SyncAll(ctx, repos, ".")
 	if err != nil {
 		log.Fatalf("problem syncing repos: %s", err)
@@ -57,7 +59,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("problem building workspace: %s", err)
 	}
-	runBuild(ctx, space)
+
+	err = unibuild.Build(ctx, space)
+	log.Printf("build took %s", time.Now().Sub(start))
+
+	if err != nil {
+		log.Fatalf("build failed: %s", err)
+	}
+	log.Printf("build ok")
 }
 
 type Flags struct {
@@ -135,14 +144,4 @@ func checkout(ctx context.Context, l repo.Local, branches ...string) error {
 		return ErrNoBranchesToTry
 	}
 	return err
-}
-
-func runBuild(ctx context.Context, ws unibuild.Workspace) {
-	start := time.Now()
-	_, err := unibuild.Build(ctx, ws)
-	log.Printf("build took %s", time.Now().Sub(start))
-	if err != nil {
-		log.Fatalf("build failed: %s", err)
-	}
-	log.Print("build ok")
 }

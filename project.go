@@ -12,7 +12,7 @@ import (
 type Project interface {
 	Info() ProjectInfo
 	Deps() []ProjectInfo
-	Build(ctx context.Context, arts map[ProjectInfo][]Artifact, logTo io.Writer) ([]Artifact, error)
+	Build(ctx context.Context, logTo io.Writer) error
 }
 
 type ProjectInfo struct {

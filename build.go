@@ -13,28 +13,26 @@ import (
 	"github.com/soniakeys/graph"
 )
 
-func Build(ctx context.Context, space Workspace) (map[ProjectInfo][]Artifact, error) {
-	arts := make(map[ProjectInfo][]Artifact)
+func Build(ctx context.Context, space Workspace) error {
 	prjs, err := space.Projects(ctx)
 	if err != nil {
-		return arts, oops.Wrapf(err, "cannot list projects")
+		return oops.Wrapf(err, "cannot list projects")
 	}
 
 	orded, err := orderProjects(prjs)
 	if err != nil {
-		return arts, oops.Wrapf(err, "cannot resolve build order")
+		return oops.Wrapf(err, "cannot resolve build order")
 	}
 
 	for _, prj := range orded {
 
-		outs, err := prj.Build(ctx, arts, os.Stdout)
+		err := prj.Build(ctx, os.Stdout)
 		if err != nil {
-			return arts, oops.Wrapf(err, "cannot build project %v", prj.Info())
+			return oops.Wrapf(err, "cannot build project %v", prj.Info())
 		}
-		arts[prj.Info()] = outs
 	}
 
-	return arts, nil
+	return nil
 }
 
 func orderProjects(prjs []Project) ([]Project, error) {
