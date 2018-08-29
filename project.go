@@ -12,6 +12,8 @@ import (
 type Project interface {
 	Info() ProjectInfo
 	Deps() []ProjectInfo
+	Uses() []Requirement
+	Builds() []RequirementVersion
 	Build(ctx context.Context, logTo io.Writer) error
 }
 

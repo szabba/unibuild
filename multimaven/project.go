@@ -20,6 +20,8 @@ type Project struct {
 	version  string
 	dir      string
 	deps     []unibuild.ProjectInfo
+	uses     []unibuild.Requirement
+	builds   []unibuild.RequirementVersion
 	pomHeads []maven.Header
 }
 
@@ -28,7 +30,12 @@ var _ unibuild.Project = Project{}
 func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 	pomHeads, err := maven.Scan(ctx, clone.Path)
 	if err != nil {
-		return Project{}, oops.Wrapf(err, "failed scanning for maven modules in %s", clone.Path)
+		return Project{}, oops.Wrapf(err, "problem scanning for maven modules in %s", clone.Path)
+	}
+
+	uses, err := findUses(ctx, clone, pomHeads)
+	if err != nil {
+		return Project{}, oops.Wrapf(err, "problem resolving maven dependencies in %s", clone.Path)
 	}
 
 	prj := Project{
@@ -36,8 +43,25 @@ func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 		version:  pomHeads[0].EffectiveVersion(),
 		dir:      clone.Path,
 		pomHeads: pomHeads,
+		uses:     uses,
+		builds:   headsToBuilds(pomHeads),
 	}
+
 	return prj, nil
+}
+
+func headsToBuilds(heads []maven.Header) []unibuild.RequirementVersion {
+	vreqs := make([]unibuild.RequirementVersion, len(heads))
+	for i, h := range heads {
+		vreqs[i] = unibuild.RequirementVersion{
+			ID: unibuild.RequirementIdentity{
+				Name: h.EffectiveGroupID() + ":" + h.EffectiveArtifactID(),
+			},
+			// TODO: Handle versioning
+			// Version: h.EffectiveVersion(),
+		}
+	}
+	return vreqs
 }
 
 func (prj Project) Info() unibuild.ProjectInfo {
@@ -48,6 +72,10 @@ func (prj Project) Info() unibuild.ProjectInfo {
 }
 
 func (prj Project) Deps() []unibuild.ProjectInfo { return prj.deps }
+
+func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
+
+func (prj Project) Builds() []unibuild.RequirementVersion { return nil }
 
 func (prj Project) MavenModuleHeaders() []maven.Header { return prj.pomHeads }
 
@@ -89,4 +117,23 @@ func (prj Project) FindMavenDeps(ctx context.Context) ([]maven.Identity, error) 
 		mods[i] = h.EffectiveIdentity()
 	}
 	return maven.ListDeps(ctx, prj.dir, mods)
+}
+
+func findUses(ctx context.Context, clone repo.Local, heads []maven.Header) ([]unibuild.Requirement, error) {
+	mods := make([]maven.Identity, len(heads))
+	for i, h := range heads {
+		mods[i] = h.EffectiveIdentity()
+	}
+
+	depIDs, err := maven.ListDeps(ctx, clone.Path, mods)
+	if err != nil {
+		return nil, oops.Wrapf(err, "problem listing maven deps in %s", clone.Path)
+	}
+
+	reqs := make([]unibuild.Requirement, len(depIDs))
+	for i, id := range depIDs {
+		reqs[i] = NewRequirement(id)
+	}
+
+	return reqs, nil
 }

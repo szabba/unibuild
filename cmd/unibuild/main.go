@@ -62,7 +62,13 @@ func main() {
 
 	prjs := space.Projects()
 
-	err = unibuild.BuildProjects(ctx, prjs)
+	ws := unibuild.NewWorkspace(prjs)
+	order, err := ws.FindBuildOrder()
+	if err != nil {
+		log.Fatalf("problem finding build order: %s", err)
+	}
+
+	err = runBuild(ctx, order)
 	log.Printf("build took %s", time.Now().Sub(start))
 
 	if err != nil {
@@ -127,4 +133,15 @@ func getRepos(authToken, name string) (*repo.Set, error) {
 		}
 	}
 	return repos, nil
+}
+
+func runBuild(ctx context.Context, prjs []unibuild.Project) error {
+	for _, p := range prjs {
+		err := p.Build(ctx, os.Stdout)
+		if err != nil {
+			return oops.Wrapf(err, "problem building project %s", p.Info().Name)
+		}
+		log.Printf("succesfully built %s", p.Info().Name)
+	}
+	return nil
 }
