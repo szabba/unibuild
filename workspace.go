@@ -38,7 +38,6 @@ func (w *Workspace) FindBuildOrder() ([]Project, error) {
 
 func (w *Workspace) buildProviderMap() (map[RequirementIdentity]int, error) {
 	providers := map[RequirementIdentity]int{}
-
 	for i, p := range w.projects {
 		for _, b := range p.Builds() {
 
@@ -59,7 +58,6 @@ func (w *Workspace) buildProviderMap() (map[RequirementIdentity]int, error) {
 func (w *Workspace) depGraph(providerIxs map[RequirementIdentity]int) graph.Directed {
 	adjList := make(graph.AdjacencyList, len(w.projects))
 	for i, p := range w.projects {
-		// TODO: non-nil ix map
 		adjList[i] = w.edgeEnds(p, providerIxs)
 	}
 	return graph.Directed{adjList}

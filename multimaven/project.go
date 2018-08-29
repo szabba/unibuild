@@ -89,7 +89,7 @@ func (prj Project) Info() unibuild.ProjectInfo {
 
 func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 
-func (prj Project) Builds() []unibuild.RequirementVersion { return nil }
+func (prj Project) Builds() []unibuild.RequirementVersion { return prj.builds }
 
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
 	cmd := exec.CommandContext(ctx, "mvn", "clean", "deploy")
