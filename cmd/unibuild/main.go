@@ -55,12 +55,10 @@ func main() {
 		log.Fatalf("problem checking out appropriate branches: %s", err)
 	}
 
-	space, err := multimaven.NewWorkspace(ctx, clones)
+	prjs, err := getProjects(ctx, clones)
 	if err != nil {
-		log.Fatalf("problem building workspace: %s", err)
+		log.Fatalf("problem analyzing projects: %s", err)
 	}
-
-	prjs := space.Projects()
 
 	ws := unibuild.NewWorkspace(prjs)
 	order, err := ws.FindBuildOrder()
@@ -133,6 +131,19 @@ func getRepos(authToken, name string) (*repo.Set, error) {
 		}
 	}
 	return repos, nil
+}
+
+func getProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Project, error) {
+	prjs := make([]unibuild.Project, 0, clones.Size())
+	err := clones.EachTry(func(cln repo.Local) error {
+		p, err := multimaven.NewProject(ctx, cln)
+		prjs = append(prjs, p)
+		return oops.Wrapf(err, "problem analyzing project in repo at %s", cln.Path)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return prjs, nil
 }
 
 func runBuild(ctx context.Context, prjs []unibuild.Project) error {

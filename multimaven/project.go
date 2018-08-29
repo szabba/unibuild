@@ -16,13 +16,11 @@ import (
 )
 
 type Project struct {
-	name     string
-	version  string
-	dir      string
-	deps     []unibuild.ProjectInfo
-	uses     []unibuild.Requirement
-	builds   []unibuild.RequirementVersion
-	pomHeads []maven.Header
+	name    string
+	version string
+	dir     string
+	uses    []unibuild.Requirement
+	builds  []unibuild.RequirementVersion
 }
 
 var _ unibuild.Project = Project{}
@@ -39,15 +37,33 @@ func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 	}
 
 	prj := Project{
-		name:     clone.Name,
-		version:  pomHeads[0].EffectiveVersion(),
-		dir:      clone.Path,
-		pomHeads: pomHeads,
-		uses:     uses,
-		builds:   headsToBuilds(pomHeads),
+		name:    clone.Name,
+		version: pomHeads[0].EffectiveVersion(),
+		dir:     clone.Path,
+		uses:    uses,
+		builds:  headsToBuilds(pomHeads),
 	}
 
 	return prj, nil
+}
+
+func findUses(ctx context.Context, clone repo.Local, heads []maven.Header) ([]unibuild.Requirement, error) {
+	mods := make([]maven.Identity, len(heads))
+	for i, h := range heads {
+		mods[i] = h.EffectiveIdentity()
+	}
+
+	depIDs, err := maven.ListDeps(ctx, clone.Path, mods)
+	if err != nil {
+		return nil, oops.Wrapf(err, "problem listing maven deps in %s", clone.Path)
+	}
+
+	reqs := make([]unibuild.Requirement, len(depIDs))
+	for i, id := range depIDs {
+		reqs[i] = NewRequirement(id)
+	}
+
+	return reqs, nil
 }
 
 func headsToBuilds(heads []maven.Header) []unibuild.RequirementVersion {
@@ -71,37 +87,9 @@ func (prj Project) Info() unibuild.ProjectInfo {
 	}
 }
 
-func (prj Project) Deps() []unibuild.ProjectInfo { return prj.deps }
-
 func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 
 func (prj Project) Builds() []unibuild.RequirementVersion { return nil }
-
-func (prj Project) MavenModuleHeaders() []maven.Header { return prj.pomHeads }
-
-func (prj Project) WithDependnecies(ctx context.Context, providers map[maven.Identity]Project) (Project, error) {
-	mvnDeps, err := prj.FindMavenDeps(ctx)
-	if err != nil {
-		return prj, oops.Wrapf(err, "problem resolving deps of %s", prj.name)
-	}
-
-	depSet := make(map[unibuild.ProjectInfo]bool, len(mvnDeps))
-	for _, mvnDep := range mvnDeps {
-		d, ok := providers[mvnDep]
-		if !ok {
-			continue
-		}
-		depSet[d.Info()] = true
-	}
-
-	out := prj
-	out.deps = make([]unibuild.ProjectInfo, 0, len(depSet))
-	for di := range depSet {
-		out.deps = append(out.deps, di)
-	}
-
-	return out, nil
-}
 
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
 	cmd := exec.CommandContext(ctx, "mvn", "clean", "deploy")
@@ -109,31 +97,4 @@ func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
 	cmd.Stdout = logTo
 	cmd.Stderr = logTo
 	return cmd.Run()
-}
-
-func (prj Project) FindMavenDeps(ctx context.Context) ([]maven.Identity, error) {
-	mods := make([]maven.Identity, len(prj.pomHeads))
-	for i, h := range prj.pomHeads {
-		mods[i] = h.EffectiveIdentity()
-	}
-	return maven.ListDeps(ctx, prj.dir, mods)
-}
-
-func findUses(ctx context.Context, clone repo.Local, heads []maven.Header) ([]unibuild.Requirement, error) {
-	mods := make([]maven.Identity, len(heads))
-	for i, h := range heads {
-		mods[i] = h.EffectiveIdentity()
-	}
-
-	depIDs, err := maven.ListDeps(ctx, clone.Path, mods)
-	if err != nil {
-		return nil, oops.Wrapf(err, "problem listing maven deps in %s", clone.Path)
-	}
-
-	reqs := make([]unibuild.Requirement, len(depIDs))
-	for i, id := range depIDs {
-		reqs[i] = NewRequirement(id)
-	}
-
-	return reqs, nil
 }
