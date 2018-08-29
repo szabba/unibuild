@@ -42,6 +42,14 @@
   revision = "7b5d1f6e4fe06231cf5c9a55229321b73e167913"
 
 [[projects]]
+  branch = "master"
+  digest = "1:2aed81199df31595370bfaed56c70d6ab57678e086936061df05c083977cbfa6"
+  name = "github.com/szabba/assert"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8a229384affe0fafd7b75cbccdb4a6f59a77f8b1"
+
+[[projects]]
   digest = "1:f0a751f9c93fde1a5810ad158a07d6fa1b4ee8a8f2f632488b0277a6e815befc"
   name = "github.com/xanzy/go-gitlab"
   packages = ["."]
@@ -93,6 +101,7 @@
   input-imports = [
     "github.com/samsarahq/go/oops",
     "github.com/soniakeys/graph",
+    "github.com/szabba/assert",
     "github.com/xanzy/go-gitlab",
   ]
   solver-name = "gps-cdcl"
