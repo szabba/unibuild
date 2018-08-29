@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -20,8 +19,6 @@ import (
 	"github.com/szabba/uninbuild/multimaven"
 	"github.com/szabba/uninbuild/repo"
 )
-
-var ErrNoBranchesToTry = errors.New("no branches to try provided")
 
 func main() {
 	flags := new(Flags)
@@ -52,8 +49,11 @@ func main() {
 	}
 
 	err = clones.EachTry(func(l repo.Local) error {
-		return checkout(ctx, l, flags.branches.topic, flags.branches.default_)
+		return l.CheckoutFirst(ctx, flags.branches.topic, flags.branches.default_)
 	})
+	if err != nil {
+		log.Fatalf("problem checking out appropriate branches: %s", err)
+	}
 
 	space, err := multimaven.NewWorkspace(ctx, clones)
 	if err != nil {
@@ -127,23 +127,4 @@ func getRepos(authToken, name string) (*repo.Set, error) {
 		}
 	}
 	return repos, nil
-}
-
-func checkout(ctx context.Context, l repo.Local, branches ...string) error {
-	var err error
-	anyTried := false
-	for _, br := range branches {
-		if br == "" {
-			continue
-		}
-		anyTried = true
-		err = l.Checkout(ctx, br)
-		if err == nil {
-			return nil
-		}
-	}
-	if !anyTried {
-		return ErrNoBranchesToTry
-	}
-	return err
 }

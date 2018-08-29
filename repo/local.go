@@ -8,30 +8,9 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/samsarahq/go/oops"
 )
-
-type Remote struct {
-	Name string
-	URL  string
-}
-
-func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
-	cmd := exec.CommandContext(ctx, "git", "clone", r.URL)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return Local{}, err
-	}
-	return Local{
-		Remote: r,
-		Path:   filepath.Join(dir, r.Name),
-	}, nil
-}
 
 type Local struct {
 	Remote
@@ -60,6 +39,17 @@ func (l Local) Checkout(ctx context.Context, ref string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func (l Local) CheckoutFirst(ctx context.Context, ref string, otherRefs ...string) error {
+	allRefs := append([]string{ref}, otherRefs...)
+	for _, ref := range allRefs {
+		err := l.Checkout(ctx, ref)
+		if err == nil {
+			return nil
+		}
+	}
+	return oops.Errorf("in repository at %s, none of the refs %q could be checked out", l.Path, allRefs)
 }
 
 func (l Local) CurrentHash(ctx context.Context) (string, error) {
