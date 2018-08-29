@@ -42,31 +42,7 @@ func main() {
 	}
 
 	start := time.Now()
-
-	clones, err := repo.SyncAll(ctx, repos, ".")
-	if err != nil {
-		log.Fatalf("problem syncing repos: %s", err)
-	}
-
-	err = clones.EachTry(func(l repo.Local) error {
-		return l.CheckoutFirst(ctx, flags.branches.topic, flags.branches.default_)
-	})
-	if err != nil {
-		log.Fatalf("problem checking out appropriate branches: %s", err)
-	}
-
-	prjs, err := getProjects(ctx, clones)
-	if err != nil {
-		log.Fatalf("problem analyzing projects: %s", err)
-	}
-
-	ws := unibuild.NewWorkspace(prjs)
-	order, err := ws.FindBuildOrder()
-	if err != nil {
-		log.Fatalf("problem finding build order: %s", err)
-	}
-
-	err = runBuild(ctx, order)
+	err = runBuild(ctx, repos, flags)
 	log.Printf("build took %s", time.Now().Sub(start))
 
 	if err != nil {
@@ -113,6 +89,41 @@ func (fs *Flags) Parse() {
 	}
 }
 
+func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
+	clones, err := repo.SyncAll(ctx, repos, ".")
+	if err != nil {
+		log.Fatalf("problem syncing repos: %s", err)
+	}
+
+	err = clones.EachTry(func(l repo.Local) error {
+		return l.CheckoutFirst(ctx, flags.branches.topic, flags.branches.default_)
+	})
+	if err != nil {
+		return oops.Wrapf(err, "problem checking out appropriate branches")
+	}
+
+	prjs, err := analyzeProjects(ctx, clones)
+	if err != nil {
+		return oops.Wrapf(err, "problem analyzing projects")
+	}
+
+	ws := unibuild.NewWorkspace(prjs)
+	order, err := ws.FindBuildOrder()
+	if err != nil {
+		return oops.Wrapf(err, "problem finding build order")
+	}
+
+	for _, p := range order {
+		err := p.Build(ctx, os.Stdout)
+		if err != nil {
+			return oops.Wrapf(err, "problem building project %s", p.Info().Name)
+		}
+		log.Printf("succesfully built %s", p.Info().Name)
+	}
+
+	return nil
+}
+
 func getRepos(authToken, name string) (*repo.Set, error) {
 	cli := gitlab.NewClient(nil, authToken)
 	group, _, err := cli.Groups.GetGroup(name)
@@ -133,7 +144,7 @@ func getRepos(authToken, name string) (*repo.Set, error) {
 	return repos, nil
 }
 
-func getProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Project, error) {
+func analyzeProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Project, error) {
 	prjs := make([]unibuild.Project, 0, clones.Size())
 	err := clones.EachTry(func(cln repo.Local) error {
 		p, err := multimaven.NewProject(ctx, cln)
@@ -144,15 +155,4 @@ func getProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Projec
 		return nil, err
 	}
 	return prjs, nil
-}
-
-func runBuild(ctx context.Context, prjs []unibuild.Project) error {
-	for _, p := range prjs {
-		err := p.Build(ctx, os.Stdout)
-		if err != nil {
-			return oops.Wrapf(err, "problem building project %s", p.Info().Name)
-		}
-		log.Printf("succesfully built %s", p.Info().Name)
-	}
-	return nil
 }
