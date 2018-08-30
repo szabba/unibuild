@@ -15,9 +15,9 @@ import (
 	"github.com/samsarahq/go/oops"
 	"github.com/xanzy/go-gitlab"
 
-	"github.com/szabba/uninbuild"
-	"github.com/szabba/uninbuild/multimaven"
-	"github.com/szabba/uninbuild/repo"
+	"github.com/szabba/unibuild"
+	"github.com/szabba/unibuild/multimaven"
+	"github.com/szabba/unibuild/repo"
 )
 
 func main() {

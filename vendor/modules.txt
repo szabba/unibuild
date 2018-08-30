@@ -1,0 +1,28 @@
+# github.com/golang/protobuf v1.1.0
+github.com/golang/protobuf/proto
+# github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135
+github.com/google/go-querystring/query
+# github.com/samsarahq/go v0.0.0-20180710184812-c046b0801eb2
+github.com/samsarahq/go/oops
+# github.com/soniakeys/bits v1.0.0
+github.com/soniakeys/bits
+# github.com/soniakeys/graph v0.0.0-20180428232946-7b5d1f6e4fe0
+github.com/soniakeys/graph
+# github.com/szabba/assert v1.0.0
+github.com/szabba/assert
+# github.com/xanzy/go-gitlab v0.10.8
+github.com/xanzy/go-gitlab
+# golang.org/x/net v0.0.0-20180816102801-aaf60122140d
+golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
+# golang.org/x/oauth2 v0.0.0-20180724155351-3d292e4d0cdc
+golang.org/x/oauth2
+golang.org/x/oauth2/internal
+# google.golang.org/appengine v1.1.0
+google.golang.org/appengine/urlfetch
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/remote_api

@@ -5,8 +5,8 @@
 package multimaven
 
 import (
-	"github.com/szabba/uninbuild"
-	"github.com/szabba/uninbuild/maven"
+	"github.com/szabba/unibuild"
+	"github.com/szabba/unibuild/maven"
 )
 
 type Requirement struct {

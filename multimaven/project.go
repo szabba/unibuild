@@ -10,9 +10,9 @@ import (
 	"os/exec"
 
 	"github.com/samsarahq/go/oops"
-	"github.com/szabba/uninbuild"
-	"github.com/szabba/uninbuild/maven"
-	"github.com/szabba/uninbuild/repo"
+	"github.com/szabba/unibuild"
+	"github.com/szabba/unibuild/maven"
+	"github.com/szabba/unibuild/repo"
 )
 
 type Project struct {
