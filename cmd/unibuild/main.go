@@ -108,7 +108,7 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 	}
 
 	ws := unibuild.NewWorkspace(prjs)
-	order, err := ws.FindBuildOrder()
+	order, err := ws.BuildOrder()
 	if err != nil {
 		return oops.Wrapf(err, "problem finding build order")
 	}

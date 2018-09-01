@@ -12,28 +12,39 @@ import (
 )
 
 type Workspace struct {
-	projects []Project
+	projects     []Project
+	depGraph     graph.Directed
+	order, cycle []Project
+	cycleErr     error
 }
 
 func NewWorkspace(projects []Project) *Workspace {
-	return &Workspace{
+	w := &Workspace{
 		projects: append([]Project{}, projects...),
 	}
+	w.resolveOrder()
+	return w
 }
 
-func (w *Workspace) FindBuildOrder() ([]Project, error) {
+func (w *Workspace) resolveOrder() {
 	providers, err := w.buildProviderMap()
 	if err != nil {
-		return nil, oops.Wrapf(err, "problem building providers map")
+		w.cycleErr = oops.Wrapf(err, "problem building providers map")
+		return
 	}
 
-	g := w.depGraph(providers)
-	order, cycle := g.Topological()
-
-	if order == nil {
-		return nil, oops.Errorf("build dependency cycle %s", w.orderProjects(cycle))
+	w.depGraph = w.buildDepGraph(providers)
+	order, cycle := w.depGraph.Topological()
+	if len(cycle) > 0 {
+		w.cycle = w.orderProjects(cycle)
+		w.cycleErr = NewDependencyCycleError(w.cycle)
+		return
 	}
-	return w.orderProjects(order), nil
+	w.order = w.orderProjects(order)
+}
+
+func (w *Workspace) BuildOrder() ([]Project, error) {
+	return append([]Project{}, w.order...), w.cycleErr
 }
 
 func (w *Workspace) buildProviderMap() (map[RequirementIdentity]int, error) {
@@ -55,7 +66,7 @@ func (w *Workspace) buildProviderMap() (map[RequirementIdentity]int, error) {
 	return providers, nil
 }
 
-func (w *Workspace) depGraph(providerIxs map[RequirementIdentity]int) graph.Directed {
+func (w *Workspace) buildDepGraph(providerIxs map[RequirementIdentity]int) graph.Directed {
 	adjList := make(graph.AdjacencyList, len(w.projects))
 	for i, p := range w.projects {
 		adjList[i] = w.edgeEnds(p, providerIxs)
