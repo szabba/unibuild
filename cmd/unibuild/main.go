@@ -16,11 +16,18 @@ import (
 	"github.com/xanzy/go-gitlab"
 
 	"github.com/szabba/unibuild"
+	"github.com/szabba/unibuild/binhash"
 	"github.com/szabba/unibuild/multimaven"
 	"github.com/szabba/unibuild/repo"
 )
 
 func main() {
+	hash, err := binhash.OwnHash()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("running binary hash: %x", hash)
+
 	flags := new(Flags)
 	flags.Parse()
 
@@ -92,7 +99,7 @@ func (fs *Flags) Parse() {
 func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 	clones, err := repo.SyncAll(ctx, repos, ".")
 	if err != nil {
-		log.Fatalf("problem syncing repos: %s", err)
+		return oops.Wrapf(err, "problem syncing repos")
 	}
 
 	err = clones.EachTry(func(l repo.Local) error {
