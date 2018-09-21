@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/samsarahq/go/oops"
-	"github.com/xanzy/go-gitlab"
+	gitlab "github.com/xanzy/go-gitlab"
 
 	"github.com/szabba/unibuild"
 	"github.com/szabba/unibuild/binhash"
