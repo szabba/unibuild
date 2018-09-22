@@ -67,6 +67,7 @@ type Flags struct {
 		topic    string
 		default_ string
 	}
+	filters []unibuild.Filter
 }
 
 func (fs *Flags) Parse() {
@@ -94,6 +95,8 @@ func (fs *Flags) Parse() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
+
+	fs.filters = []unibuild.Filter{unibuild.Exactly("maven-app")}
 }
 
 func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
@@ -120,7 +123,9 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 		return oops.Wrapf(err, "problem finding build order")
 	}
 
-	for _, p := range ordSuite.Order() {
+	filterSuite := ordSuite.Filter(flags.filters...)
+
+	for _, p := range filterSuite.Order() {
 		err := p.Build(ctx, os.Stdout)
 		if err != nil {
 			return oops.Wrapf(err, "problem building project %s", p.Info().Name)

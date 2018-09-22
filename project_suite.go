@@ -22,19 +22,16 @@ func NewProjectSuite(projects ...Project) *ProjectSuite {
 }
 
 func (ps *ProjectSuite) ResolveOrder() (OrderedProjectSuite, error) {
-	order, depGraph, err := ps.resolveOrder()
+	ixOrder, depGraph, err := ps.resolveOrder()
 	if err != nil {
 		return OrderedProjectSuite{}, err
 	}
-	ordSuite := OrderedProjectSuite{
-		projects: ps.projects,
-		depGraph: depGraph,
-		order:    order,
-	}
+	order := ps.orderProjects(ixOrder)
+	ordSuite := OrderedProjectSuite{ps.projects, depGraph, ixOrder, order}
 	return ordSuite, nil
 }
 
-func (ps *ProjectSuite) resolveOrder() ([]Project, graph.Directed, error) {
+func (ps *ProjectSuite) resolveOrder() ([]graph.NI, graph.Directed, error) {
 	providers, err := ps.buildProviderMap()
 	if err != nil {
 		return nil, graph.Directed{}, oops.Wrapf(err, "problem building providers map")
@@ -46,7 +43,7 @@ func (ps *ProjectSuite) resolveOrder() ([]Project, graph.Directed, error) {
 		pjsCycle := ps.orderProjects(cycle)
 		return nil, depGraph, NewDependencyCycleError(pjsCycle)
 	}
-	return ps.orderProjects(order), depGraph, nil
+	return order, depGraph, nil
 }
 
 func (ps *ProjectSuite) buildProviderMap() (map[RequirementIdentity]int, error) {
@@ -105,9 +102,33 @@ func (ps *ProjectSuite) orderProjects(order []graph.NI) []Project {
 type OrderedProjectSuite struct {
 	projects []Project
 	depGraph graph.Directed
+	ixOrder  []graph.NI
 	order    []Project
 }
 
 func (ops OrderedProjectSuite) Order() []Project {
 	return append([]Project{}, ops.order...)
+}
+
+func (ops OrderedProjectSuite) Filter(fs ...Filter) FilteredProjectSuite {
+	include := make([]bool, len(ops.projects))
+	for _, f := range fs {
+		f.Filter(ops.projects, ops.depGraph, include)
+	}
+	order := make([]Project, 0, len(ops.projects))
+	for _, i := range ops.ixOrder {
+		if include[i] {
+			nextProj := ops.projects[i]
+			order = append(order, nextProj)
+		}
+	}
+	return FilteredProjectSuite{order}
+}
+
+type FilteredProjectSuite struct {
+	order []Project
+}
+
+func (fps FilteredProjectSuite) Order() []Project {
+	return append([]Project{}, fps.order...)
 }
