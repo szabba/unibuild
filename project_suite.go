@@ -11,22 +11,22 @@ import (
 	"github.com/soniakeys/graph"
 )
 
-type ProjecSuite struct {
+type ProjectSuite struct {
 	projects []Project
 	depGraph graph.Directed
 	order    []Project
 	cycleErr error
 }
 
-func NewProjecSuite(projects []Project) *ProjecSuite {
-	ps := &ProjecSuite{
+func NewProjectSuite(projects ...Project) *ProjectSuite {
+	ps := &ProjectSuite{
 		projects: append([]Project{}, projects...),
 	}
 	ps.resolveOrder()
 	return ps
 }
 
-func (ps *ProjecSuite) resolveOrder() {
+func (ps *ProjectSuite) resolveOrder() {
 	providers, err := ps.buildProviderMap()
 	if err != nil {
 		ps.cycleErr = oops.Wrapf(err, "problem building providers map")
@@ -43,11 +43,11 @@ func (ps *ProjecSuite) resolveOrder() {
 	ps.order = ps.orderProjects(order)
 }
 
-func (ps *ProjecSuite) BuildOrder() ([]Project, error) {
+func (ps *ProjectSuite) BuildOrder() ([]Project, error) {
 	return append([]Project{}, ps.order...), ps.cycleErr
 }
 
-func (ps *ProjecSuite) buildProviderMap() (map[RequirementIdentity]int, error) {
+func (ps *ProjectSuite) buildProviderMap() (map[RequirementIdentity]int, error) {
 	providers := map[RequirementIdentity]int{}
 	for i, p := range ps.projects {
 		for _, b := range p.Builds() {
@@ -66,15 +66,17 @@ func (ps *ProjecSuite) buildProviderMap() (map[RequirementIdentity]int, error) {
 	return providers, nil
 }
 
-func (ps *ProjecSuite) buildDepGraph(providerIxs map[RequirementIdentity]int) graph.Directed {
+func (ps *ProjectSuite) buildDepGraph(providerIxs map[RequirementIdentity]int) graph.Directed {
 	adjList := make(graph.AdjacencyList, len(ps.projects))
 	for i, p := range ps.projects {
 		adjList[i] = ps.edgeEnds(p, providerIxs)
 	}
-	return graph.Directed{adjList}
+	inverse := graph.Directed{adjList}
+	depGraph, _ := inverse.Transpose()
+	return depGraph
 }
 
-func (ps *ProjecSuite) edgeEnds(p Project, providerIxs map[RequirementIdentity]int) []graph.NI {
+func (ps *ProjectSuite) edgeEnds(p Project, providerIxs map[RequirementIdentity]int) []graph.NI {
 	uses := p.Uses()
 	ends := make([]graph.NI, 0, len(uses))
 	for _, req := range uses {
@@ -90,7 +92,7 @@ func (ps *ProjecSuite) edgeEnds(p Project, providerIxs map[RequirementIdentity]i
 	return ends
 }
 
-func (ps *ProjecSuite) orderProjects(order []graph.NI) []Project {
+func (ps *ProjectSuite) orderProjects(order []graph.NI) []Project {
 	pjs := make([]Project, len(order))
 	for i, pIX := range order {
 		pjs[i] = ps.projects[pIX]

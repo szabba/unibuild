@@ -114,7 +114,7 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 		return oops.Wrapf(err, "problem analyzing projects")
 	}
 
-	ps := unibuild.NewProjecSuite(prjs)
+	ps := unibuild.NewProjectSuite(prjs...)
 	order, err := ps.BuildOrder()
 	if err != nil {
 		return oops.Wrapf(err, "problem finding build order")
