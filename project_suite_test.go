@@ -33,7 +33,8 @@ func TestLibraryIsSortedBeforeAnApplicationUsingIt(t *testing.T) {
 	suite := unibuild.NewProjectSuite(lib, app)
 
 	// when
-	order, err := suite.BuildOrder()
+	ordSuite, err := suite.ResolveOrder()
+	order := ordSuite.Order()
 
 	// then
 	assert.That(err == nil, t.Errorf, "unexpected error reported: %s", err)
@@ -61,7 +62,7 @@ func TestDirectCycleIsDetected(t *testing.T) {
 	suite := unibuild.NewProjectSuite(prjA, prjB)
 
 	// when
-	_, err := suite.BuildOrder()
+	_, err := suite.ResolveOrder()
 
 	// then
 	assert.That(err != nil, t.Errorf, "got no error when one is expected")
@@ -92,7 +93,7 @@ func TestIndirectCycleIsDetected(t *testing.T) {
 	suite := unibuild.NewProjectSuite(prjA, prjB, prjC)
 
 	// when
-	_, err := suite.BuildOrder()
+	_, err := suite.ResolveOrder()
 
 	// then
 	assert.That(err != nil, t.Errorf, "got no error when one is expected")

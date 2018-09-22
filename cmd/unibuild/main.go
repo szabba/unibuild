@@ -115,12 +115,12 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 	}
 
 	ps := unibuild.NewProjectSuite(prjs...)
-	order, err := ps.BuildOrder()
+	ordSuite, err := ps.ResolveOrder()
 	if err != nil {
 		return oops.Wrapf(err, "problem finding build order")
 	}
 
-	for _, p := range order {
+	for _, p := range ordSuite.Order() {
 		err := p.Build(ctx, os.Stdout)
 		if err != nil {
 			return oops.Wrapf(err, "problem building project %s", p.Info().Name)

@@ -13,38 +13,40 @@ import (
 
 type ProjectSuite struct {
 	projects []Project
-	depGraph graph.Directed
-	order    []Project
-	cycleErr error
 }
 
 func NewProjectSuite(projects ...Project) *ProjectSuite {
-	ps := &ProjectSuite{
+	return &ProjectSuite{
 		projects: append([]Project{}, projects...),
 	}
-	ps.resolveOrder()
-	return ps
 }
 
-func (ps *ProjectSuite) resolveOrder() {
+func (ps *ProjectSuite) ResolveOrder() (OrderedProjectSuite, error) {
+	order, depGraph, err := ps.resolveOrder()
+	if err != nil {
+		return OrderedProjectSuite{}, err
+	}
+	ordSuite := OrderedProjectSuite{
+		projects: ps.projects,
+		depGraph: depGraph,
+		order:    order,
+	}
+	return ordSuite, nil
+}
+
+func (ps *ProjectSuite) resolveOrder() ([]Project, graph.Directed, error) {
 	providers, err := ps.buildProviderMap()
 	if err != nil {
-		ps.cycleErr = oops.Wrapf(err, "problem building providers map")
-		return
+		return nil, graph.Directed{}, oops.Wrapf(err, "problem building providers map")
 	}
 
-	ps.depGraph = ps.buildDepGraph(providers)
-	order, cycle := ps.depGraph.Topological()
+	depGraph := ps.buildDepGraph(providers)
+	order, cycle := depGraph.Topological()
 	if len(cycle) > 0 {
 		pjsCycle := ps.orderProjects(cycle)
-		ps.cycleErr = NewDependencyCycleError(pjsCycle)
-		return
+		return nil, depGraph, NewDependencyCycleError(pjsCycle)
 	}
-	ps.order = ps.orderProjects(order)
-}
-
-func (ps *ProjectSuite) BuildOrder() ([]Project, error) {
-	return append([]Project{}, ps.order...), ps.cycleErr
+	return ps.orderProjects(order), depGraph, nil
 }
 
 func (ps *ProjectSuite) buildProviderMap() (map[RequirementIdentity]int, error) {
@@ -98,4 +100,14 @@ func (ps *ProjectSuite) orderProjects(order []graph.NI) []Project {
 		pjs[i] = ps.projects[pIX]
 	}
 	return pjs
+}
+
+type OrderedProjectSuite struct {
+	projects []Project
+	depGraph graph.Directed
+	order    []Project
+}
+
+func (ops OrderedProjectSuite) Order() []Project {
+	return append([]Project{}, ops.order...)
 }
