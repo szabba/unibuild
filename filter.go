@@ -8,8 +8,6 @@ import (
 	"github.com/soniakeys/graph"
 )
 
-// type alias Filter = DirectedGraph Project -> Dict Project bool -> Dict Project Bool
-
 type Filter interface {
 	Filter([]Project, graph.Directed, []bool)
 }
@@ -30,4 +28,14 @@ func WithDeps(prjName string) Filter { return nil }
 
 func WithDependents(prjName string) Filter { return nil }
 
-func Exclude(prjName string) Filter { return nil }
+func Exclude(prjName string) Filter { return exclude(prjName) }
+
+type exclude string
+
+func (ex exclude) Filter(ps []Project, _ graph.Directed, include []bool) {
+	for i, p := range ps {
+		if p.Info().Name == string(ex) {
+			include[i] = false
+		}
+	}
+}
