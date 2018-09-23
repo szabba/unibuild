@@ -22,6 +22,10 @@ import (
 	"github.com/szabba/unibuild/repo"
 )
 
+const (
+	DefaultBaseURL = "https://gitlab.com/"
+)
+
 func main() {
 	hash, err := binhash.OwnHash()
 	if err != nil {
@@ -36,7 +40,7 @@ func main() {
 		log.SetFlags(log.Flags() | log.LUTC)
 	}
 
-	repos, err := getRepos(flags.authToken, flags.group)
+	repos, err := getRepos(flags.baseURL, flags.authToken, flags.group)
 	if err != nil {
 		log.Fatalf("problem getting repos: %s", err)
 	}
@@ -60,6 +64,7 @@ func main() {
 }
 
 type Flags struct {
+	baseURL   string
 	logUTC    bool
 	timeout   time.Duration
 	authToken string
@@ -74,6 +79,7 @@ type Flags struct {
 func (fs *Flags) Parse() {
 	flag.BoolVar(&fs.logUTC, "log-utc", false, "when present, the time in logs is in UTC (local otherwise)")
 	flag.DurationVar(&fs.timeout, "timeout", time.Duration(0), "the timeout for the build (ignored if <= 0)")
+	flag.StringVar(&fs.baseURL, "base-url", DefaultBaseURL, "gitlab API base URL (must end with /)")
 	flag.StringVar(&fs.authToken, "auth-token", "", "gitlab API authentication token (required)")
 	flag.StringVar(&fs.group, "group", "", "gitlab group to clone repositories from (required)")
 	flag.StringVar(&fs.branches.topic, "topic-branch", "", "topic branch to checkout, if available (ignored when empty)")
@@ -151,8 +157,12 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 	return nil
 }
 
-func getRepos(authToken, name string) (*repo.Set, error) {
+func getRepos(baseURL, authToken, name string) (*repo.Set, error) {
 	cli := gitlab.NewClient(nil, authToken)
+	err := cli.SetBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+	}
 	group, _, err := cli.Groups.GetGroup(name)
 	if err != nil {
 		return nil, oops.Wrapf(err, "cannot retrieve gitlab group %s", name)
