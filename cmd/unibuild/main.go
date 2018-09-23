@@ -85,26 +85,33 @@ func (fs *Flags) Parse() {
 	noGroup := fs.group == ""
 
 	if noAuthToken {
-		fmt.Println("an authentication token needs to be specified")
+		fs.fail("an authentication token needs to be specified")
 	}
 	if noGroup {
-		fmt.Println("a gitlab group needs to be specified")
+		fs.fail("a gitlab group needs to be specified")
 	}
 
-	if noAuthToken || noGroup {
-		fmt.Println()
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	filters, err := filterparser.Parse(flag.Args()...)
+	err := fs.parseFilters()
 	if err != nil {
-		fmt.Println(err)
-		flag.Usage()
-		os.Exit(1)
+		fs.fail(err.Error())
 	}
+}
 
+func (fs *Flags) parseFilters() error {
+	builder := filterparser.NewBuilder()
+	filters, err := filterparser.Parse(builder, flag.Args()...)
+	if err != nil {
+		return err
+	}
 	fs.filters = filters
+	return nil
+}
+
+func (fs *Flags) fail(message string) {
+	fmt.Println(message)
+	fmt.Println()
+	flag.Usage()
+	os.Exit(1)
 }
 
 func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {

@@ -1,6 +1,7 @@
 module github.com/szabba/unibuild
 
 require (
+	github.com/golang/mock v1.1.1
 	github.com/golang/protobuf v1.1.0 // indirect
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/samsarahq/go v0.0.0-20180710184812-c046b0801eb2
