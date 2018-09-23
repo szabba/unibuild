@@ -17,6 +17,7 @@ import (
 
 	"github.com/szabba/unibuild"
 	"github.com/szabba/unibuild/binhash"
+	"github.com/szabba/unibuild/filterparser"
 	"github.com/szabba/unibuild/multimaven"
 	"github.com/szabba/unibuild/repo"
 )
@@ -92,11 +93,18 @@ func (fs *Flags) Parse() {
 
 	if noAuthToken || noGroup {
 		fmt.Println()
-		flag.PrintDefaults()
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	fs.filters = []unibuild.Filter{unibuild.Exactly("maven-app")}
+	filters, err := filterparser.Parse(flag.Args()...)
+	if err != nil {
+		fmt.Println(err)
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	fs.filters = filters
 }
 
 func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
