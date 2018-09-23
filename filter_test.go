@@ -34,7 +34,7 @@ func TestFilters(t *testing.T) {
 			Builds_: []unibuild.RequirementVersion{{ID: idC}},
 		}
 		prjD unibuild.Project = Project{
-			Info_:   unibuild.ProjectInfo{Name: "c"},
+			Info_:   unibuild.ProjectInfo{Name: "d"},
 			Uses_:   []unibuild.Requirement{Requirement{ID_: idA}},
 			Builds_: []unibuild.RequirementVersion{{ID: idD}},
 		}
@@ -56,7 +56,6 @@ func TestFilters(t *testing.T) {
 	})
 
 	t.Run("BWithDeps", func(t *testing.T) {
-		t.SkipNow()
 		// given
 		filter := unibuild.WithDeps("b")
 
@@ -69,7 +68,6 @@ func TestFilters(t *testing.T) {
 	})
 
 	t.Run("CWithDeps", func(t *testing.T) {
-		t.SkipNow()
 		// given
 		filter := unibuild.WithDeps("c")
 
@@ -82,7 +80,6 @@ func TestFilters(t *testing.T) {
 	})
 
 	t.Run("BWithDependents", func(t *testing.T) {
-		t.SkipNow()
 		// given
 		filter := unibuild.WithDependents("b")
 
@@ -95,7 +92,6 @@ func TestFilters(t *testing.T) {
 	})
 
 	t.Run("BDepsAndDependents", func(t *testing.T) {
-		t.SkipNow()
 		// given
 		withDeps := unibuild.WithDeps("b")
 		withDependents := unibuild.WithDependents("b")
@@ -143,6 +139,6 @@ func assertOrder(onErr assert.ErrorFunc, got []unibuild.Project, want ...unibuil
 	}
 	for i := range got {
 		pGot, pWant := got[i], want[i]
-		assert.That(pGot.Info() == pWant.Info(), onErr, "got %d-th project %#v, want %#v", pGot.Info(), pWant.Info())
+		assert.That(pGot.Info() == pWant.Info(), onErr, "got %d-th project %#v, want %#v", i, pGot.Info(), pWant.Info())
 	}
 }
