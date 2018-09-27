@@ -67,13 +67,10 @@ type Flags struct {
 	baseURL   string
 	logUTC    bool
 	timeout   time.Duration
+	branches  CommaList
 	authToken string
 	group     string
-	branches  struct {
-		topic    string
-		default_ string
-	}
-	filters []unibuild.Filter
+	filters   []unibuild.Filter
 }
 
 func (fs *Flags) Parse() {
@@ -82,8 +79,8 @@ func (fs *Flags) Parse() {
 	flag.StringVar(&fs.baseURL, "base-url", DefaultBaseURL, "gitlab API base URL (must end with /)")
 	flag.StringVar(&fs.authToken, "auth-token", "", "gitlab API authentication token (required)")
 	flag.StringVar(&fs.group, "group", "", "gitlab group to clone repositories from (required)")
-	flag.StringVar(&fs.branches.topic, "topic-branch", "", "topic branch to checkout, if available (ignored when empty)")
-	flag.StringVar(&fs.branches.default_, "default-branch", "master", "the branch to default to when the topic branch is not used")
+	flag.Var(&fs.branches, "branches", "comma-separated list of branches to try checking out")
+	fs.branches.Set("master")
 
 	flag.Parse()
 
@@ -127,7 +124,7 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 	}
 
 	err = clones.EachTry(func(l repo.Local) error {
-		return l.CheckoutFirst(ctx, flags.branches.topic, flags.branches.default_)
+		return l.CheckoutFirst(ctx, flags.branches.list[0], flags.branches.list[1:]...)
 	})
 	if err != nil {
 		return oops.Wrapf(err, "problem checking out appropriate branches")
