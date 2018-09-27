@@ -182,8 +182,12 @@ func analyzeProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Pr
 	prjs := make([]unibuild.Project, 0, clones.Size())
 	err := clones.EachTry(func(cln repo.Local) error {
 		p, err := multimaven.NewProject(ctx, cln)
+		if err != nil {
+			log.Printf("problem analyzing project in repo at %s: %s", cln.Path, err)
+			return nil
+		}
 		prjs = append(prjs, p)
-		return oops.Wrapf(err, "problem analyzing project in repo at %s", cln.Path)
+		return nil
 	})
 	if err != nil {
 		return nil, err
