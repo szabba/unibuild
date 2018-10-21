@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/szabba/unibuild/prefixio"
 )
 
 type Remote struct {
@@ -17,10 +19,8 @@ type Remote struct {
 }
 
 func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
-	cmd := exec.CommandContext(ctx, "git", "clone", r.URL)
+	cmd := r.Command(ctx, "git", "clone", r.URL)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		return Local{}, err
@@ -29,4 +29,11 @@ func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
 		Remote: r,
 		Path:   filepath.Join(dir, r.Name),
 	}, nil
+}
+
+func (r Remote) Command(ctx context.Context, cmdName string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, cmdName, args...)
+	cmd.Stdout = prefixio.NewWriter(os.Stdout, r.Name+" | ")
+	cmd.Stderr = prefixio.NewWriter(os.Stderr, r.Name+" | ")
+	return cmd
 }
