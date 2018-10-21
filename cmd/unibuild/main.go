@@ -148,7 +148,6 @@ func runBuild(ctx context.Context, repos *repo.Set, flags *Flags) error {
 		if err != nil {
 			return oops.Wrapf(err, "problem building project %s", p.Info().Name)
 		}
-		log.Printf("succesfully built %s", p.Info().Name)
 	}
 
 	return nil
