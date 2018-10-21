@@ -7,9 +7,9 @@ package multimaven
 import (
 	"context"
 	"io"
-	"os/exec"
 
 	"github.com/samsarahq/go/oops"
+
 	"github.com/szabba/unibuild"
 	"github.com/szabba/unibuild/maven"
 	"github.com/szabba/unibuild/repo"
@@ -18,7 +18,7 @@ import (
 type Project struct {
 	name    string
 	version string
-	dir     string
+	clone   repo.Local
 	uses    []unibuild.Requirement
 	builds  []unibuild.RequirementVersion
 }
@@ -39,7 +39,7 @@ func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 	prj := Project{
 		name:    clone.Name,
 		version: pomHeads[0].EffectiveVersion(),
-		dir:     clone.Path,
+		clone:   clone,
 		uses:    uses,
 		builds:  headsToBuilds(pomHeads),
 	}
@@ -92,9 +92,6 @@ func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 func (prj Project) Builds() []unibuild.RequirementVersion { return prj.builds }
 
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
-	cmd := exec.CommandContext(ctx, "mvn", "clean", "deploy")
-	cmd.Dir = prj.dir
-	cmd.Stdout = logTo
-	cmd.Stderr = logTo
+	cmd := prj.clone.Command(ctx, "mvn", "clean", "deploy")
 	return cmd.Run()
 }
