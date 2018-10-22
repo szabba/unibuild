@@ -37,7 +37,7 @@ func Scan(ctx context.Context, dir string) ([]Header, error) {
 }
 
 func scanPaths(ctx context.Context, path string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "mvn", "-q", "--also-make", "exec:exec", "-Dexec.executable=pwd")
+	cmd := exec.CommandContext(ctx, "mvn", "-q", "--also-make", "exec:exec", "-Dexec.executable="+_WorkDirCmd)
 	cmd.Dir = path
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
