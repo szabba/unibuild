@@ -2,18 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package multimaven
+package maven
 
 import (
 	"github.com/szabba/unibuild"
-	"github.com/szabba/unibuild/maven"
 )
 
 type Requirement struct {
 	id unibuild.RequirementIdentity
 }
 
-func NewRequirement(id maven.Identity) Requirement {
+func NewRequirement(id Identity) Requirement {
 	return Requirement{
 		id: unibuild.RequirementIdentity{
 			Name: id.GroupID + ":" + id.ArtifactID,
