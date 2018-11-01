@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package multimaven
+package maven
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/samsarahq/go/oops"
 
 	"github.com/szabba/unibuild"
-	"github.com/szabba/unibuild/maven"
 	"github.com/szabba/unibuild/repo"
 )
 
@@ -26,7 +25,7 @@ type Project struct {
 var _ unibuild.Project = Project{}
 
 func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
-	pomHeads, err := maven.Scan(ctx, clone.Path)
+	pomHeads, err := Scan(ctx, clone.Path)
 	if err != nil {
 		return Project{}, oops.Wrapf(err, "problem scanning for maven modules in %s", clone.Path)
 	}
@@ -47,13 +46,13 @@ func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 	return prj, nil
 }
 
-func findUses(ctx context.Context, clone repo.Local, heads []maven.Header) ([]unibuild.Requirement, error) {
-	mods := make([]maven.Identity, len(heads))
+func findUses(ctx context.Context, clone repo.Local, heads []Header) ([]unibuild.Requirement, error) {
+	mods := make([]Identity, len(heads))
 	for i, h := range heads {
 		mods[i] = h.EffectiveIdentity()
 	}
 
-	depIDs, err := maven.ListDeps(ctx, clone.Path, mods)
+	depIDs, err := ListDeps(ctx, clone.Path, mods)
 	if err != nil {
 		return nil, oops.Wrapf(err, "problem listing maven deps in %s", clone.Path)
 	}
@@ -66,7 +65,7 @@ func findUses(ctx context.Context, clone repo.Local, heads []maven.Header) ([]un
 	return reqs, nil
 }
 
-func headsToBuilds(heads []maven.Header) []unibuild.RequirementVersion {
+func headsToBuilds(heads []Header) []unibuild.RequirementVersion {
 	vreqs := make([]unibuild.RequirementVersion, len(heads))
 	for i, h := range heads {
 		vreqs[i] = unibuild.RequirementVersion{

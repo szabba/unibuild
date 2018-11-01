@@ -18,7 +18,7 @@ import (
 	"github.com/szabba/unibuild"
 	"github.com/szabba/unibuild/binhash"
 	"github.com/szabba/unibuild/filterparser"
-	"github.com/szabba/unibuild/multimaven"
+	"github.com/szabba/unibuild/maven"
 	"github.com/szabba/unibuild/repo"
 )
 
@@ -180,7 +180,7 @@ func getRepos(baseURL, authToken, name string) (*repo.Set, error) {
 func analyzeProjects(ctx context.Context, clones *repo.ClonedSet) ([]unibuild.Project, error) {
 	prjs := make([]unibuild.Project, 0, clones.Size())
 	err := clones.EachTry(func(cln repo.Local) error {
-		p, err := multimaven.NewProject(ctx, cln)
+		p, err := maven.NewProject(ctx, cln)
 		if err != nil {
 			log.Printf("problem analyzing project in repo at %s: %s", cln.Path, err)
 			return nil
