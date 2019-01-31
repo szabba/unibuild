@@ -25,58 +25,68 @@ type Project struct {
 var _ unibuild.Project = Project{}
 
 func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
-	pomHeads, err := Scan(ctx, clone.Path)
+	effPom, err := ParseEffectivePomOfClone(ctx, clone)
 	if err != nil {
-		return Project{}, oops.Wrapf(err, "problem scanning for maven modules in %s", clone.Path)
+		return Project{}, oops.Wrapf(err, "problem scanning effective POM in %s", clone.Path)
 	}
 
-	uses, err := findUses(ctx, clone, pomHeads)
-	if err != nil {
-		return Project{}, oops.Wrapf(err, "problem resolving maven dependencies in %s", clone.Path)
+	if len(effPom.Projects) == 0 {
+		return Project{}, oops.Errorf("effective POM invalid: has no projects")
 	}
+
+	builds := findBuilds(effPom)
 
 	prj := Project{
 		name:    clone.Name,
-		version: pomHeads[0].EffectiveVersion(),
+		version: effPom.Projects[0].EffectiveVersion(),
 		clone:   clone,
-		uses:    uses,
-		builds:  headsToBuilds(pomHeads),
+		uses:    findUses(effPom, builds),
+		builds:  builds,
 	}
 
 	return prj, nil
 }
 
-func findUses(ctx context.Context, clone repo.Local, heads []Header) ([]unibuild.Requirement, error) {
-	mods := make([]Identity, len(heads))
-	for i, h := range heads {
-		mods[i] = h.EffectiveIdentity()
-	}
-
-	depIDs, err := ListDeps(ctx, clone.Path, mods)
-	if err != nil {
-		return nil, oops.Wrapf(err, "problem listing maven deps in %s", clone.Path)
-	}
-
-	reqs := make([]unibuild.Requirement, len(depIDs))
-	for i, id := range depIDs {
-		reqs[i] = NewRequirement(id)
-	}
-
-	return reqs, nil
-}
-
-func headsToBuilds(heads []Header) []unibuild.RequirementVersion {
-	vreqs := make([]unibuild.RequirementVersion, len(heads))
-	for i, h := range heads {
-		vreqs[i] = unibuild.RequirementVersion{
+func findBuilds(effPom EffectivePom) []unibuild.RequirementVersion {
+	builds := make([]unibuild.RequirementVersion, 0, len(effPom.Projects))
+	for _, prj := range effPom.Projects {
+		bld := unibuild.RequirementVersion{
 			ID: unibuild.RequirementIdentity{
-				Name: h.EffectiveGroupID() + ":" + h.EffectiveArtifactID(),
+				Name: prj.EffectiveGroupID() + ":" + prj.EffectiveArtifactID(),
 			},
 			// TODO: Handle versioning
 			// Version: h.EffectiveVersion(),
 		}
+		builds = append(builds, bld)
 	}
-	return vreqs
+	return builds
+}
+
+func findUses(effPom EffectivePom, builds []unibuild.RequirementVersion) []unibuild.Requirement {
+	all := make(map[unibuild.Requirement]bool)
+	for _, prj := range effPom.Projects {
+		for _, dep := range prj.Dependencies {
+			req := NewRequirement(dep)
+			if isSatisifed(req, builds) {
+				continue
+			}
+			all[req] = true
+		}
+	}
+
+	out := make([]unibuild.Requirement, 0, len(all))
+	for req := range all {
+		out = append(out, req)
+	}
+	return out
+}
+
+func isSatisifed(req unibuild.Requirement, builds []unibuild.RequirementVersion) bool {
+	satisfied := false
+	for _, bld := range builds {
+		satisfied = satisfied || unibuild.Satisfies(bld, req)
+	}
+	return satisfied
 }
 
 func (prj Project) Info() unibuild.ProjectInfo {
