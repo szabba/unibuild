@@ -28,3 +28,7 @@ type RequirementVersion struct {
 	// TODO: Handle versioning
 	// Version Version
 }
+
+func Satisfies(reqver RequirementVersion, req Requirement) bool {
+	return reqver.ID == req.ID()
+}

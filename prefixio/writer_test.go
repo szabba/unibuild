@@ -129,7 +129,6 @@ func TestWriteMultipleLineChunksAndNewlines(t *testing.T) {
 	n, err = io.WriteString(w, "b\nc")
 
 	// then
-
 	assert.That(n == 3, t.Fatalf, "n: got %d, want %d", n, 3)
 	assert.That(err == nil, t.Fatalf, "unexpected error: %s", err)
 	assert.That(out.String() == "> ab\n> c", t.Errorf, "out: got %q, want %q", out.String(), "> ab\n> c")
