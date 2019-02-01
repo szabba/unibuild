@@ -4,5 +4,5 @@
 
 // Package maven provides bare-bones utilities for analysing maven projects.
 //
-// Some functions in this package assume require mvn to be in your PATH.
+// Some functions in this package assume mvn to be in your PATH.
 package maven

@@ -14,6 +14,7 @@ import (
 	"github.com/szabba/unibuild/repo"
 )
 
+// A Project that is built using maven.
 type Project struct {
 	name    string
 	version string
@@ -24,6 +25,7 @@ type Project struct {
 
 var _ unibuild.Project = Project{}
 
+// NewProject attempts to create a maven project given a locally cloned repository.
 func NewProject(ctx context.Context, clone repo.Local) (Project, error) {
 	effPom, err := ParseEffectivePomOfClone(ctx, clone)
 	if err != nil {

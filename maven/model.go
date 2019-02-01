@@ -4,20 +4,24 @@
 
 package maven
 
-import (
-	"encoding/xml"
-	"errors"
-	"io"
-	"os"
-
-	"github.com/samsarahq/go/oops"
-)
+import "errors"
 
 var (
 	errNoGroupID    = errors.New("no groupId")
 	errNoArtifactID = errors.New("no artifactId")
 	errNoVersion    = errors.New("no version")
 )
+
+// An EffectivePom contains the interesting parts of the mvn help:effective-pom output for a multi-module project.
+type EffectivePom struct {
+	Projects []EffectiveModule `xml:"project"`
+}
+
+// An EffectiveModule contains the interesting parts of the mvn help:effective-pom output for a single-module project.
+type EffectiveModule struct {
+	Header
+	Dependencies []Identity `xml:"dependencies>dependency"`
+}
 
 // A Header corresponds to the parts of a POM that determine the identity of a maven module.
 type Header struct {
@@ -32,38 +36,19 @@ type Identity struct {
 	Version    string `xml:"version"`
 }
 
-// ParseHeaderFromPath parses the Header from a POM with the given path.
-// Parsing will fail if the POM is missing information required to compute an Identity.
-// The path should locate the POM file, not the directory it resides in.
-func ParseHeaderFromPath(path string) (Header, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return Header{}, oops.Wrapf(err, "cannot open file to parse version from")
-	}
-	defer f.Close()
-	return ParseHeader(f)
-}
-
-// ParseHeader parses the Header of a POM from the given io.Reader.
-// Parsing will fail if the POM is missing information required to compute an Identity.
-func ParseHeader(r io.Reader) (Header, error) {
-	head := Header{}
-	err := xml.NewDecoder(r).Decode(&head)
-	if err != nil {
-		return Header{}, err
-	}
+// Validate reports issues with the header value.
+func (head Header) Validate() error {
 
 	if head.Version == "" && head.Parent.Version == "" {
-		return Header{}, errNoVersion
+		return errNoVersion
 	}
 	if head.ArtifactID == "" && head.Parent.ArtifactID == "" {
-		return Header{}, errNoArtifactID
+		return errNoArtifactID
 	}
 	if head.GroupID == "" && head.Parent.GroupID == "" {
-		return Header{}, errNoGroupID
+		return errNoGroupID
 	}
-
-	return head, nil
+	return nil
 }
 
 // EffectiveIdentity calculates the effective identity of a module based on it's Header.
