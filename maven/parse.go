@@ -31,14 +31,7 @@ func ParseEffectivePomOfClone(ctx context.Context, cln repo.Local) (EffectivePom
 	}
 
 	// TODO: on Windows the path might contain spaces...
-	cmd := exec.CommandContext(
-		ctx,
-		"mvn", "org.apache.maven.plugins:maven-help-plugin:3.1.0:effective-pom",
-		"-Doutput="+tmpfile.Name())
-	cmd.Dir = cln.Path
-	cmd.Stdout = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
-	cmd.Stderr = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
-	err = cmd.Run()
+	err = writeEffectivePomTo(ctx, cln, tmpfile.Name())
 	if err != nil {
 		return EffectivePom{}, err
 	}
@@ -50,6 +43,17 @@ func ParseEffectivePomOfClone(ctx context.Context, cln repo.Local) (EffectivePom
 	defer tmpfile.Close()
 
 	return ParseEffectivePom(tmpfile)
+}
+
+func writeEffectivePomTo(ctx context.Context, cln repo.Local, dst string) error {
+	cmd := exec.CommandContext(
+		ctx,
+		"mvn", "org.apache.maven.plugins:maven-help-plugin:3.1.0:effective-pom",
+		"-Doutput="+dst)
+	cmd.Dir = cln.Path
+	cmd.Stdout = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
+	cmd.Stderr = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
+	return cmd.Run()
 }
 
 func ParseEffectivePom(r io.Reader) (EffectivePom, error) {
@@ -90,13 +94,4 @@ func parseSingleModuleProject(r io.Reader) (EffectivePom, error) {
 		Projects: []EffectiveModule{mod},
 	}
 	return pom, nil
-}
-
-type EffectivePom struct {
-	Projects []EffectiveModule `xml:"project"`
-}
-
-type EffectiveModule struct {
-	Header
-	Dependencies []Identity `xml:"dependencies>dependency"`
 }
