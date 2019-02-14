@@ -5,6 +5,7 @@
 package prefixio_test
 
 import (
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -133,3 +134,22 @@ func TestWriteMultipleLineChunksAndNewlines(t *testing.T) {
 	assert.That(err == nil, t.Fatalf, "unexpected error: %s", err)
 	assert.That(out.String() == "> ab\n> c", t.Errorf, "out: got %q, want %q", out.String(), "> ab\n> c")
 }
+
+func TestReturnsTheUnderlyingWritersError(t *testing.T) {
+	// given
+	err := errors.New("an error")
+	out := _ErrWriter{err}
+	w := prefixio.NewWriter(out, "> ")
+
+	// when
+	_, gotErr := io.WriteString(w, "a")
+
+	// then
+	assert.That(gotErr == err, t.Fatalf, "got error %q, want %q", gotErr, err)
+}
+
+type _ErrWriter struct{ err error }
+
+var _ io.Writer = _ErrWriter{}
+
+func (w _ErrWriter) Write(_ []byte) (int, error) { return 0, w.err }

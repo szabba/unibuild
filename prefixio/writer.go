@@ -6,6 +6,7 @@
 package prefixio
 
 import (
+	"bytes"
 	"io"
 	"regexp"
 )
@@ -14,7 +15,10 @@ import (
 type Writer struct {
 	dst        io.Writer
 	linePrefix []byte
-	continued  bool
+
+	buf       bytes.Buffer
+	keeps     [][2]int
+	continued bool
 }
 
 // NewWriter returns a new Writer with the given line prefix.
@@ -28,44 +32,66 @@ func NewWriter(dst io.Writer, linePrefix string) *Writer {
 var _ io.Writer = new(Writer)
 
 var (
-	lineChunk   = regexp.MustCompile(`[^\r\n]*(\r?\n|$)`)
-	lineWithEnd = regexp.MustCompile(`[^\r\n]*\r?\n`)
+	_LineChunk   = regexp.MustCompile(`[^\r\n]*(\r?\n|$)`)
+	_LineWithEnd = regexp.MustCompile(`[^\r\n]*\r?\n`)
 )
 
-func (w *Writer) Write(p []byte) (n int, err error) {
-	chunks := lineChunk.FindAll(p, -1)
+func (w *Writer) Write(p []byte) (int, error) {
+	w.reset()
+	w.bufferOutput(p)
+	return w.copy()
+}
+
+func (w *Writer) reset() {
+	w.buf.Reset()
+	w.keeps = w.keeps[:0]
+}
+
+func (w *Writer) bufferOutput(p []byte) {
+	if len(p) == 0 {
+		return
+	}
+	chunks := _LineChunk.FindAll(p, -1)
 	for _, c := range chunks {
-		dn, err := w.writeChunk(c)
-		n += dn
-		if err != nil {
-			return n, err
+		w.bufferChunk(c)
+	}
+}
+
+func (w *Writer) copy() (int, error) {
+	n, err := io.Copy(w.dst, &w.buf)
+	return w.translateOffset(int(n)), err
+}
+
+func (w *Writer) bufferChunk(c []byte) {
+	if !w.continued {
+		w.buf.Write(w.linePrefix)
+	}
+	w.buf.Write(c)
+	w.keeps = append(w.keeps, w.keep(c))
+	w.continued = !_LineWithEnd.Match(c)
+}
+
+func (w *Writer) keep(c []byte) [2]int {
+	off := 0
+	if !w.continued {
+		off += len(w.linePrefix)
+	}
+	if len(w.keeps) != 0 {
+		last := len(w.keeps) - 1
+		off += w.keeps[last][1]
+	}
+	return [2]int{off, off + len(c)}
+}
+
+func (w *Writer) translateOffset(n int) int {
+	out := 0
+	for _, keep := range w.keeps {
+		from, upto := keep[0], keep[1]
+		if upto <= n {
+			out += upto - from
+		} else if from < upto {
+			out += n - from
 		}
 	}
-	return n, nil
-}
-
-func (w *Writer) writeChunk(c []byte) (int, error) {
-	if len(c) == 0 {
-		return 0, nil
-	}
-
-	err := w.writeChunkPrefix()
-	if err != nil {
-		return 0, err
-	}
-
-	w.rememberEnding(c)
-	return w.dst.Write(c)
-}
-
-func (w *Writer) writeChunkPrefix() error {
-	if w.continued {
-		return nil
-	}
-	_, err := w.dst.Write(w.linePrefix)
-	return err
-}
-
-func (w *Writer) rememberEnding(c []byte) {
-	w.continued = !lineWithEnd.Match(c)
+	return out
 }
