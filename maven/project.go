@@ -103,6 +103,6 @@ func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 func (prj Project) Builds() []unibuild.RequirementVersion { return prj.builds }
 
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
-	cmd := prj.clone.Command(ctx, "mvn", "clean", "deploy")
+	cmd := prj.clone.Command(ctx, "mvn", "-U", "-B", "clean", "deploy")
 	return cmd.Run()
 }
