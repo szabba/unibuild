@@ -19,14 +19,18 @@ import (
 	"github.com/szabba/unibuild/binhash"
 	"github.com/szabba/unibuild/filterparser"
 	"github.com/szabba/unibuild/maven"
+	"github.com/szabba/unibuild/prefixio"
 	"github.com/szabba/unibuild/repo"
 )
 
 const (
-	DefaultBaseURL = "https://gitlab.com/"
+	_DefaultBaseURL = "https://gitlab.com/"
 )
 
 func main() {
+	log.SetFlags(0)
+	log.SetOutput(prefixio.NewWriter(os.Stderr, "| "))
+
 	hash, err := binhash.OwnHash()
 	if err != nil {
 		log.Fatal(err)
@@ -35,10 +39,6 @@ func main() {
 
 	flags := new(Flags)
 	flags.Parse()
-
-	if flags.logUTC {
-		log.SetFlags(log.Flags() | log.LUTC)
-	}
 
 	repos, err := getRepos(flags.baseURL, flags.authToken, flags.group)
 	if err != nil {
@@ -65,7 +65,6 @@ func main() {
 
 type Flags struct {
 	baseURL   string
-	logUTC    bool
 	timeout   time.Duration
 	branches  CommaList
 	authToken string
@@ -74,9 +73,8 @@ type Flags struct {
 }
 
 func (fs *Flags) Parse() {
-	flag.BoolVar(&fs.logUTC, "log-utc", false, "when present, the time in logs is in UTC (local otherwise)")
 	flag.DurationVar(&fs.timeout, "timeout", time.Duration(0), "the timeout for the build (ignored if <= 0)")
-	flag.StringVar(&fs.baseURL, "base-url", DefaultBaseURL, "gitlab API base URL (must end with /)")
+	flag.StringVar(&fs.baseURL, "base-url", _DefaultBaseURL, "gitlab API base URL (must end with /)")
 	flag.StringVar(&fs.authToken, "auth-token", "", "gitlab API authentication token (required)")
 	flag.StringVar(&fs.group, "group", "", "gitlab group to clone repositories from (required)")
 	flag.Var(&fs.branches, "branches", "comma-separated list of branches to try checking out")
