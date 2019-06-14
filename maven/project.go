@@ -7,6 +7,7 @@ package maven
 import (
 	"context"
 	"io"
+	"regexp"
 
 	"github.com/samsarahq/go/oops"
 
@@ -102,7 +103,8 @@ func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 
 func (prj Project) Builds() []unibuild.RequirementVersion { return prj.builds }
 
+var _Line = regexp.MustCompile(`[^\r\n]*\r?\n`)
+
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
-	cmd := prj.clone.Command(ctx, "mvn", "-U", "-B", "clean", "deploy")
-	return cmd.Run()
+	return cloneWrap{prj.clone}.Run(ctx, "mvn", "-U", "-B", "clean", "deploy")
 }
