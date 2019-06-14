@@ -6,9 +6,11 @@ package repo
 
 import (
 	"context"
+	"os"
 	"os/exec"
 
 	"github.com/samsarahq/go/oops"
+	"github.com/szabba/unibuild/prefixio"
 )
 
 type Local struct {
@@ -17,18 +19,19 @@ type Local struct {
 }
 
 func (l Local) Reset(ctx context.Context) error {
-	cmd := l.Command(ctx, "git", "reset", "--hard")
-	return cmd.Run()
+	err := l.Run(ctx, "git", "reset", "--hard")
+	return oops.Wrapf(err, "in repository at %s, failed to reset", l.Path)
 }
 
 func (l Local) Fetch(ctx context.Context) error {
-	cmd := l.Command(ctx, "git", "fetch", "--force", "--prune", "--tags")
-	return cmd.Run()
+	err := l.Run(ctx, "git", "fetch", "--force", "--prune", "--tags")
+	return oops.Wrapf(err, "in repository at %s, failed to fetch", l.Path)
+
 }
 
 func (l Local) Checkout(ctx context.Context, ref string) error {
-	cmd := l.Command(ctx, "git", "checkout", "-B", ref, "origin/"+ref)
-	return cmd.Run()
+	err := l.Run(ctx, "git", "checkout", "-B", ref, "origin/"+ref)
+	return oops.Wrapf(err, "in repository at %s, failed to checkout %s", l.Path, ref)
 }
 
 func (l Local) CheckoutFirst(ctx context.Context, ref string, otherRefs ...string) error {
@@ -49,6 +52,13 @@ func (l Local) CurrentHash(ctx context.Context) (string, error) {
 		return "", oops.Wrapf(err, "cannot get current commit hash of repo at %s", l.Path)
 	}
 	return string(out), nil
+}
+
+func (l Local) Run(ctx context.Context, cmdName string, args ...string) error {
+	cmd := l.Command(ctx, cmdName, args...)
+	out, err := cmd.CombinedOutput()
+	prefixio.NewWriter(os.Stdout, l.Name+" | ").Write(out)
+	return err
 }
 
 func (l Local) Command(ctx context.Context, cmdName string, args ...string) *exec.Cmd {

@@ -51,9 +51,9 @@ func writeEffectivePomTo(ctx context.Context, cln repo.Local, dst string) error 
 		"mvn", "org.apache.maven.plugins:maven-help-plugin:3.1.0:effective-pom",
 		"-Doutput="+dst)
 	cmd.Dir = cln.Path
-	cmd.Stdout = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
-	cmd.Stderr = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
-	return cmd.Run()
+	out, err := cmd.CombinedOutput()
+	prefixio.NewWriter(os.Stdout, cln.Name+" | ").Write(out)
+	return err
 }
 
 func ParseEffectivePom(r io.Reader) (EffectivePom, error) {
