@@ -11,8 +11,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 
 	"github.com/samsarahq/go/oops"
+	"github.com/szabba/unibuild/prefixio"
 
 	"github.com/szabba/unibuild/repo"
 )
@@ -44,11 +46,14 @@ func ParseEffectivePomOfClone(ctx context.Context, cln repo.Local) (EffectivePom
 }
 
 func writeEffectivePomTo(ctx context.Context, cln repo.Local, dst string) error {
-	clnWrap := cloneWrap{cln}
-	return clnWrap.Run(
+	cmd := exec.CommandContext(
 		ctx,
 		"mvn", "org.apache.maven.plugins:maven-help-plugin:3.1.0:effective-pom",
 		"-Doutput="+dst)
+	cmd.Dir = cln.Path
+	cmd.Stdout = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
+	cmd.Stderr = prefixio.NewWriter(os.Stdout, cln.Name+" | ")
+	return cmd.Run()
 }
 
 func ParseEffectivePom(r io.Reader) (EffectivePom, error) {

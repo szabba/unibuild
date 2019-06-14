@@ -6,10 +6,9 @@ package repo
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/szabba/unibuild/output"
 
 	"github.com/szabba/unibuild/prefixio"
 )
@@ -34,15 +33,7 @@ func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
 
 func (r Remote) Command(ctx context.Context, cmdName string, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, cmdName, args...)
-	r.wrapOutput(ctx, cmd)
+	cmd.Stdout = prefixio.NewWriter(os.Stdout, r.Name+" | ")
+	cmd.Stderr = prefixio.NewWriter(os.Stderr, r.Name+" | ")
 	return cmd
-}
-
-func (r Remote) wrapOutput(ctx context.Context, cmd *exec.Cmd) {
-	// FIXME? Possible abuse of context.
-	prefix := r.Name + " | "
-	stdout := output.FromContext(ctx)
-	stderr := output.ErrFromContext(ctx)
-	cmd.Stdout = prefixio.NewWriter(stdout, prefix)
-	cmd.Stderr = prefixio.NewWriter(stderr, prefix)
 }
