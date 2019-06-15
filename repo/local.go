@@ -6,11 +6,9 @@ package repo
 
 import (
 	"context"
-	"os"
 	"os/exec"
 
 	"github.com/samsarahq/go/oops"
-	"github.com/szabba/unibuild/prefixio"
 )
 
 type Local struct {
@@ -26,7 +24,6 @@ func (l Local) Reset(ctx context.Context) error {
 func (l Local) Fetch(ctx context.Context) error {
 	err := l.Run(ctx, "git", "fetch", "--force", "--prune", "--tags")
 	return oops.Wrapf(err, "in repository at %s, failed to fetch", l.Path)
-
 }
 
 func (l Local) Checkout(ctx context.Context, ref string) error {
@@ -49,6 +46,7 @@ func (l Local) CurrentHash(ctx context.Context) (string, error) {
 	cmd := l.Command(ctx, "git", "show", "--format", "format:%H", "-s")
 	out, err := cmd.Output()
 	if err != nil {
+		l.Out().Write(out)
 		return "", oops.Wrapf(err, "cannot get current commit hash of repo at %s", l.Path)
 	}
 	return string(out), nil
@@ -57,7 +55,7 @@ func (l Local) CurrentHash(ctx context.Context) (string, error) {
 func (l Local) Run(ctx context.Context, cmdName string, args ...string) error {
 	cmd := l.Command(ctx, cmdName, args...)
 	out, err := cmd.CombinedOutput()
-	prefixio.NewWriter(os.Stdout, l.Name+" | ").Write(out)
+	l.Out().Write(out)
 	return err
 }
 
