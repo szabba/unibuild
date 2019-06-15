@@ -12,25 +12,25 @@ type Filter interface {
 	Filter([]Project, graph.Directed, []bool)
 }
 
-func Exactly(prjName string) Filter { return exactly(prjName) }
+func Exactly(prjName string) Filter { return exactly{prjName} }
 
-type exactly string
+type exactly struct{ prjName string }
 
 func (ex exactly) Filter(ps []Project, _ graph.Directed, include []bool) {
 	for i, p := range ps {
-		if p.Info().Name == string(ex) {
+		if p.Info().Name == ex.prjName {
 			include[i] = true
 		}
 	}
 }
 
-func WithDependents(prjName string) Filter { return withDependents(prjName) }
+func WithDependents(prjName string) Filter { return withDependents{prjName} }
 
-type withDependents string
+type withDependents struct{ prjName string }
 
 func (wd withDependents) Filter(ps []Project, deps graph.Directed, include []bool) {
 	for i, p := range ps {
-		if p.Info().Name == string(wd) {
+		if p.Info().Name == wd.prjName {
 			wd.markDeps(deps, include, i)
 		}
 	}
@@ -45,25 +45,24 @@ func (wd withDependents) markDeps(deps graph.Directed, include []bool, i int) {
 		}
 		queue, nextQueue = nextQueue, queue[:0]
 	}
-
 }
 
-func WithDeps(prjName string) Filter { return withDeps(prjName) }
+func WithDeps(prjName string) Filter { return withDeps{prjName} }
 
-type withDeps string
+type withDeps struct{ prjName string }
 
 func (wd withDeps) Filter(ps []Project, deps graph.Directed, include []bool) {
 	invDeps, _ := deps.Transpose()
-	withDependents(string(wd)).Filter(ps, invDeps, include)
+	withDependents{wd.prjName}.Filter(ps, invDeps, include)
 }
 
-func Exclude(prjName string) Filter { return exclude(prjName) }
+func Exclude(prjName string) Filter { return exclude{prjName} }
 
-type exclude string
+type exclude struct{ prjName string }
 
 func (ex exclude) Filter(ps []Project, _ graph.Directed, include []bool) {
 	for i, p := range ps {
-		if p.Info().Name == string(ex) {
+		if p.Info().Name == ex.prjName {
 			include[i] = false
 		}
 	}
