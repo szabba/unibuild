@@ -6,6 +6,8 @@ package repo
 
 import (
 	"context"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,13 +18,29 @@ import (
 type Remote struct {
 	Name string
 	URL  string
+	out  io.Writer
+	log  *log.Logger
+}
+
+func (r Remote) Out() io.Writer {
+	if r.out == nil {
+		r.out = prefixio.NewWriter(os.Stdout, r.Name+" | ")
+	}
+	return r.out
+}
+
+func (r Remote) Log() *log.Logger {
+	if r.log == nil {
+		r.log = log.New(r.Out(), "", 0)
+	}
+	return r.log
 }
 
 func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
 	cmd := r.Command(ctx, "git", "clone", r.URL)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
-	prefixio.NewWriter(os.Stdout, r.Name+" | ").Write(out)
+	r.Out().Write(out)
 	if err != nil {
 		return Local{}, err
 	}
