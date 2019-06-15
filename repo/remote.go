@@ -21,7 +21,8 @@ type Remote struct {
 func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
 	cmd := r.Command(ctx, "git", "clone", r.URL)
 	cmd.Dir = dir
-	err := cmd.Run()
+	out, err := cmd.CombinedOutput()
+	prefixio.NewWriter(os.Stdout, r.Name+" | ").Write(out)
 	if err != nil {
 		return Local{}, err
 	}
@@ -33,7 +34,5 @@ func (r Remote) Clone(ctx context.Context, dir string) (Local, error) {
 
 func (r Remote) Command(ctx context.Context, cmdName string, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, cmdName, args...)
-	cmd.Stdout = prefixio.NewWriter(os.Stdout, r.Name+" | ")
-	cmd.Stderr = prefixio.NewWriter(os.Stderr, r.Name+" | ")
 	return cmd
 }
