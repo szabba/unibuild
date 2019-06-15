@@ -103,6 +103,6 @@ func (prj Project) Uses() []unibuild.Requirement { return prj.uses }
 func (prj Project) Builds() []unibuild.RequirementVersion { return prj.builds }
 
 func (prj Project) Build(ctx context.Context, logTo io.Writer) error {
-	cmd := prj.clone.Command(ctx, "mvn", "-U", "-B", "clean", "deploy")
-	return cmd.Run()
+	err := prj.clone.Run(ctx, "mvn", "-U", "-B", "clean", "deploy")
+	return oops.Wrapf(err, "in repository at %s, maven build failed", prj.clone.Path)
 }
